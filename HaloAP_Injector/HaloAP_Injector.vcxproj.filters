@@ -21,9 +21,18 @@
     <ClCompile Include="pipe_server.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ap_bridge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pipe_server.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="mission_map.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ap_bridge.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -36,6 +36,7 @@ bool PipeClient::Connect() {
 
     m_connected.store(true);
     m_thread = std::thread(&PipeClient::ReaderThreadMain, this);
+    m_senderThread = std::thread(&PipeClient::SenderThreadMain, this);
     return true;
 }
 
@@ -48,9 +49,14 @@ void PipeClient::Stop() {
     if (m_shutdownEvent) {
         SetEvent(m_shutdownEvent);
     }
+    m_sendQueueCv.notify_all();
 
     if (m_thread.joinable()) {
         m_thread.join();
+    }
+
+    if (m_senderThread.joinable()) {
+        m_senderThread.join();
     }
 
     if (m_pipe != INVALID_HANDLE_VALUE) {
@@ -185,4 +191,32 @@ void PipeClient::ReaderThreadMain() {
 
 void PipeClient::HandleMessage(const std::string& message) {
     printf("[pipe <- injector] %s\n", message.c_str());
+}
+
+void PipeClient::SendAsync(const std::string& message) {
+    if (m_shutdown.load()) return;
+    {
+        std::lock_guard<std::mutex> lock(m_sendQueueMutex);
+        m_sendQueue.push_back(message);
+    }
+    m_sendQueueCv.notify_one();
+}
+
+void PipeClient::SenderThreadMain() {
+    while (!m_shutdown.load()) {
+        std::string msg;
+        {
+            std::unique_lock<std::mutex> lock(m_sendQueueMutex);
+            m_sendQueueCv.wait(lock, [this]() {
+                return !m_sendQueue.empty() || m_shutdown.load();
+                });
+            if (m_shutdown.load()) break;
+            msg = std::move(m_sendQueue.front());
+            m_sendQueue.pop_front();
+        }
+
+        // Send using the same overlapped I/O as before.
+        // Reuse the existing Send() logic.
+        Send(msg);
+    }
 }

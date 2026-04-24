@@ -19,10 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ap_bridge.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pipe_server.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ap_bridge.h" />
+    <ClInclude Include="mission_map.h" />
     <ClInclude Include="pipe_server.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -85,9 +88,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;WSWRAP_NO_SSL;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;WSWRAP_NO_COMPRESSION;NOMINMAX</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -100,9 +105,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;WSWRAP_NO_SSL;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;WSWRAP_NO_COMPRESSION;NOMINMAX</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -113,10 +120,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;WSWRAP_NO_SSL;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;WSWRAP_NO_COMPRESSION;NOMINMAX</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,9 +137,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;WSWRAP_NO_SSL;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;WSWRAP_NO_COMPRESSION;NOMINMAX</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -6,6 +6,8 @@
 #include <string>
 #include "pipe_client.h"
 #include "shared/common.h"
+#include "minhook/MinHook.h"
+#include "hooks/mission_complete.h"
 
 namespace {
 	std::atomic<bool> g_shutdown{ false };
@@ -40,6 +42,15 @@ namespace {
 		printf("  Running inside MCC (PID %lu)\n", GetCurrentProcessId());
 		printf("==========================================\n");
 
+		MH_STATUS mhStatus = MH_Initialize();
+		if (mhStatus != MH_OK) {
+			printf("MH_Initialize failed: %d\n", mhStatus);
+			// Continue anyway; hooks just won't work.
+		}
+		else {
+			printf("MinHook initialized.\n");
+		}
+
 		// Give the injector a moment to have the pipe ready, then connect.
 		// (The injector creates the pipe before injecting, so normally it's ready
 		// immediately, but a small delay is harmless and defends against timing.)
@@ -54,6 +65,14 @@ namespace {
 			printf("Sending HELLO...\n");
 			bool sendOk = g_pipe->Send("HELLO: dll speaking, v" + std::string(haloap::kVersion));
 			printf("HELLO send returned %s\n", sendOk ? "true" : "false");
+		}
+		for (int i = 0; i < 50; i++) {  // up to 5 seconds
+			if (GetModuleHandleA("halo1.dll")) break;
+			Sleep(100);
+		}
+
+		if (!haloap::InstallMissionCompleteHook(g_pipe)) {
+			printf("Failed to install mission-complete hook.\n");
 		}
 
 		int tick = 0;
@@ -82,6 +101,9 @@ namespace {
 			g_pipe = nullptr;
 		}
 
+		haloap::UninstallMissionCompleteHook();
+
+		MH_Uninitialize();
 		TeardownConsole();
 		return 0;
 	}

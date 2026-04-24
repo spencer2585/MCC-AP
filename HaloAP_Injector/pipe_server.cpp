@@ -230,4 +230,7 @@ void PipeServer::ServerThreadMain() {
 
 void PipeServer::HandleMessage(const std::string& message) {
     std::cout << "[pipe <- dll] " << message << "\n";
+    if (m_messageHandler) {
+        m_messageHandler(message);
+    }
 }

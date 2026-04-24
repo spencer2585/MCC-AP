@@ -6,7 +6,24 @@
 #include <thread>
 #include <chrono>
 #include "shared/common.h"
+#include "ap_bridge.h"
 #include "pipe_server.h"
+
+namespace {
+	// Prompt user for a line of input with an optional default.
+	std::string PromptLine(const std::string& prompt, const std::string& defaultVal = "") {
+		if (defaultVal.empty()) {
+			std::cout << prompt << ": ";
+		}
+		else {
+			std::cout << prompt << " [" << defaultVal << "]: ";
+		}
+		std::string input;
+		std::getline(std::cin, input);
+		if (input.empty()) return defaultVal;
+		return input;
+	}
+}
 
 namespace fs = std::filesystem;
 
@@ -130,31 +147,86 @@ bool InjectDLL(DWORD pid, const fs::path& dllPath) {
 }
 
 int main() {
-	std::cout << "HaloAP Injector v" << haloap::kVersion << "\n";
+	std::cout << "HaloAP Injector v" << haloap::kVersion << "\n\n";
 
+	// 1. Prompt for AP connection info.
+	std::string serverUri = PromptLine("Server address", "ws://localhost:38281");
+	// If user typed a bare host:port, prepend ws:// so apclientpp is happy.
+	if (serverUri.find("://") == std::string::npos) {
+		serverUri = "ws://" + serverUri;
+	}
+
+	std::string slot = PromptLine("Slot name");
+	while (slot.empty()) {
+		std::cout << "Slot name is required.\n";
+		slot = PromptLine("Slot name");
+	}
+
+	std::string password = PromptLine("Password (optional)");
+
+	std::cout << "\n";
+
+	// 2. Locate the DLL next to the injector.
 	wchar_t exePath[MAX_PATH];
 	GetModuleFileNameW(nullptr, exePath, MAX_PATH);
 	fs::path dllPath = fs::path(exePath).parent_path() / L"HaloAP.dll";
 
 	if (!fs::exists(dllPath)) {
-		std::cerr << "HaloAP.dll not found next to injector at: "
-			<< dllPath.string() << "\n";
+		std::cerr << "HaloAP.dll not found at: " << dllPath.string() << "\n";
 		std::cerr << "Press enter to exit.\n";
 		std::cin.get();
 		return 1;
 	}
 
-	std::cout << "DLL path: " << dllPath.string() << "\n";
-
-	// Start the pipe server BEFORE injection, so the DLL can connect
-	// as soon as it finishes loading.
-	PipeServer pipe;
-	if (!pipe.Start()) {
-		std::cerr << "Failed to start pipe server\n";
+	// 3. Start the AP bridge and wait for initial connection.
+	haloap::APBridge apBridge;
+	if (!apBridge.Start(serverUri, "Halo The Master Chief Collection", slot, password)) {
+		std::cerr << "Failed to start AP bridge.\n";
 		std::cin.get();
 		return 1;
 	}
 
+	// Start polling in a background thread.
+	std::atomic<bool> apShutdown{ false };
+	std::thread apPollThread([&apBridge, &apShutdown]() {
+		while (!apShutdown.load()) {
+			apBridge.Poll();
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		}
+		});
+
+	// Wait up to 10 seconds for slot connection before injecting.
+	std::cout << "Waiting for slot connection...\n";
+	for (int i = 0; i < 100; i++) {
+		if (apBridge.IsConnected()) break;
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+
+	if (!apBridge.IsConnected()) {
+		std::cerr << "Could not connect to AP server within 10 seconds.\n";
+		std::cerr << "Check server address, slot name, and that the server is running.\n";
+		std::cerr << "Press enter to exit.\n";
+		apShutdown.store(true);
+		if (apPollThread.joinable()) apPollThread.join();
+		std::cin.get();
+		return 1;
+	}
+
+	// 4. Start the pipe server.
+	PipeServer pipe;
+	pipe.SetMessageHandler([&apBridge](const std::string& msg) {
+		apBridge.HandleDllMessage(msg);
+		});
+
+	if (!pipe.Start()) {
+		std::cerr << "Failed to start pipe server.\n";
+		apShutdown.store(true);
+		if (apPollThread.joinable()) apPollThread.join();
+		std::cin.get();
+		return 1;
+	}
+
+	// 5. Find MCC and inject.
 	std::cout << "Looking for MCC...\n";
 	DWORD pid = 0;
 	while (pid == 0) {
@@ -169,38 +241,22 @@ int main() {
 	if (!InjectDLL(pid, dllPath)) {
 		std::cerr << "Injection failed.\n";
 		pipe.Stop();
+		apShutdown.store(true);
+		if (apPollThread.joinable()) apPollThread.join();
 		std::cin.get();
 		return 1;
 	}
-	std::cout << "Injection succeeded.\n";
+	std::cout << "Injection succeeded.\n\n";
 
-	// Main loop: send a ping every few seconds, exit on user keypress.
-	std::cout << "Press enter to exit (will shut down DLL).\n";
-
-	std::atomic<bool> pingShutdown{ false };
-	std::thread pingThread([&pipe, &pingShutdown]() {
-		int n = 0;
-		while (!pingShutdown.load()) {
-			// Sleep in short chunks so we notice shutdown quickly.
-			for (int i = 0; i < 50 && !pingShutdown.load(); ++i) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			}
-			if (pingShutdown.load()) break;
-
-			if (pipe.IsConnected()) {
-				std::string msg = "COMMAND: ping " + std::to_string(n++);
-				if (pipe.Send(msg)) {
-					std::cout << "[pipe -> dll] " << msg << "\n";
-				}
-			}
-		}
-		});
-
+	// 6. Main loop: just wait for user to exit.
+	std::cout << "Press enter to exit (will shut down DLL and disconnect).\n";
 	std::cin.get();
 
 	std::cout << "Shutting down...\n";
-	pingShutdown.store(true);
-	pingThread.join();
 	pipe.Stop();
+	apShutdown.store(true);
+	if (apPollThread.joinable()) apPollThread.join();
+	apBridge.Stop();
+
 	return 0;
 }

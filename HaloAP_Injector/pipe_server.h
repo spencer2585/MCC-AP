@@ -4,6 +4,7 @@
 #include <atomic>
 #include <thread>
 #include <string>
+#include <functional>
 
 class PipeServer {
 public:
@@ -14,6 +15,8 @@ public:
     void Stop();
     bool Send(const std::string& message);
     bool IsConnected() const { return m_connected.load(); }
+    using MessageHandler = std::function<void(const std::string&)>;
+    void SetMessageHandler(MessageHandler handler) { m_messageHandler = std::move(handler); }
 
 private:
     void ServerThreadMain();
@@ -28,4 +31,5 @@ private:
     std::thread m_thread;
     std::atomic<bool> m_shutdown{ false };
     std::atomic<bool> m_connected{ false };
+    MessageHandler m_messageHandler;
 };
