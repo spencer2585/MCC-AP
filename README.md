@@ -19,6 +19,9 @@
 ## Whats randomized
 Currently only mission access and beating levels are included. More will be added later
 
+## Whats the goal
+the goal is currently to beat the final mission of Halo CE; The Maw
+
 ## What games are currently included
 For now only Halo CE. eventual plans are to cover all 6 games included in MCC
 
