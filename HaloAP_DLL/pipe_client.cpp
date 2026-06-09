@@ -1,4 +1,5 @@
 #include "pipe_client.h"
+#include "item_handler.h"
 #include "shared/common.h"
 #include <cstdio>
 #include <vector>
@@ -190,6 +191,14 @@ void PipeClient::ReaderThreadMain() {
 }
 
 void PipeClient::HandleMessage(const std::string& message) {
+    const std::string prefix = "ITEM_RECIVED: ";
+    if (message.rfind(prefix, 0) == 0)
+    {
+        int itemID = std::atoi(message.c_str() + prefix.size());
+        printf("[pipe] Item received: %d\n", itemID);
+        haloap::GetItemHandler().addItem(itemID);
+        return;
+    }
     printf("[pipe <- injector] %s\n", message.c_str());
 }
 

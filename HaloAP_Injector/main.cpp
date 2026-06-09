@@ -153,7 +153,12 @@ int main() {
 	std::string serverUri = PromptLine("Server address", "ws://localhost:38281");
 	// If user typed a bare host:port, prepend ws:// so apclientpp is happy.
 	if (serverUri.find("://") == std::string::npos) {
-		serverUri = "ws://" + serverUri;
+		if (serverUri.find("localhost") != std::string::npos || 
+			serverUri.find("127.0.0.1") != std::string::npos) {
+			serverUri = "ws://" + serverUri;
+			} else {
+				serverUri = "wss://" + serverUri;
+			}
 	}
 
 	std::string slot = PromptLine("Slot name");
@@ -185,6 +190,8 @@ int main() {
 		std::cin.get();
 		return 1;
 	}
+	
+	
 
 	// Start polling in a background thread.
 	std::atomic<bool> apShutdown{ false };
@@ -225,6 +232,10 @@ int main() {
 		std::cin.get();
 		return 1;
 	}
+	
+	apBridge.SetSendToDll([&pipe](const std::string& msg) {
+		pipe.Send(msg);
+	});
 
 	// 5. Find MCC and inject.
 	std::cout << "Looking for MCC...\n";
@@ -247,6 +258,19 @@ int main() {
 		return 1;
 	}
 	std::cout << "Injection succeeded.\n\n";
+
+	// Wait for DLL to connect via pipe
+	std::cout << "Waiting for DLL to connect...\n";
+	for (int i = 0; i < 100; i++) {
+		if (pipe.IsConnected()) break;
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+
+	if (pipe.IsConnected()) {
+		// Small delay to let DLL finish initialization
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		apBridge.ReplayBufferedItems();
+	}
 
 	// 6. Main loop: just wait for user to exit.
 	std::cout << "Press enter to exit (will shut down DLL and disconnect).\n";

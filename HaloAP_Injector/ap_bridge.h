@@ -37,6 +37,12 @@ namespace haloap {
 
         bool IsConnected() const { return m_slotConnected.load(); }
         bool IsSocketConnected() const { return m_socketConnected.load(); }
+        
+        void SetSendToDll(std::function<void(const std::string&)> fn) {
+            m_sendToDll = std::move(fn);
+        }
+        
+        void ReplayBufferedItems();
 
     private:
         // APClient callbacks. These run on the poll thread.
@@ -48,11 +54,16 @@ namespace haloap {
         void OnSlotRefused(const std::list<std::string>& reasons);
         void OnItemsReceived(const std::list<APClient::NetworkItem>& items);
         void OnPrintJson(const APClient::PrintJSONArgs& args);
+        
+        std::function<void(const std::string&)> m_sendToDll;
 
         std::unique_ptr<APClient> m_client;
         std::string m_game;
         std::string m_slot;
         std::string m_password;
+        
+        std::mutex m_itemBufferMutex;
+        std::vector<int64_t> m_itemBuffer;
 
         std::atomic<bool> m_socketConnected{ false };
         std::atomic<bool> m_slotConnected{ false };

@@ -11,6 +11,15 @@ namespace haloap {
     APBridge::~APBridge() {
         Stop();
     }
+    
+    void APBridge::ReplayBufferedItems() {
+        if (!m_sendToDll) return;
+        std::lock_guard<std::mutex> lock(m_itemBufferMutex);
+        std::cout << "[ap] replaying " << m_itemBuffer.size() << " buffered items to DLL\n";
+        for (int64_t itemId : m_itemBuffer) {
+            m_sendToDll("ITEM_RECIVED: " + std::to_string(itemId));
+        }
+    }
 
     bool APBridge::Start(const std::string& serverUri,
         const std::string& game,
@@ -80,6 +89,12 @@ namespace haloap {
             << " (" << GetMissionDisplayName(locationId) << ")\n";
 
         SendLocation(locationId);
+        
+        if (missionCode == "d40")
+        {
+            m_client->StatusUpdate(APClient::ClientStatus::GOAL);
+        }
+        
         return true;
     }
 
@@ -148,7 +163,17 @@ namespace haloap {
             std::string itemName = m_client->get_item_name(item.item, m_game);
             std::cout << "[ap] received item: " << itemName
                 << " (id " << item.item << ")\n";
-            // TODO: forward to DLL for in-game effect. For alpha, just log.
+
+            // Buffer the item
+            {
+                std::lock_guard<std::mutex> lock(m_itemBufferMutex);
+                m_itemBuffer.push_back(item.item);
+            }
+
+            // Forward to DLL if connected
+            if (m_sendToDll) {
+                m_sendToDll("ITEM_RECIVED: " + std::to_string(item.item));
+            }
         }
     }
 

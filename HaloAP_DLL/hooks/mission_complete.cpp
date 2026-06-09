@@ -2,6 +2,7 @@
 #include "../minhook/MinHook.h"
 #include "../pattern_scan.h"
 #include "shared/common.h"
+#include "shell_command.h"
 #include <cstdio>
 #include <cstring>
 
@@ -61,7 +62,7 @@ namespace haloap {
             }
 
             printf("[hook] MISSION_COMPLETE: %s\n", missionName ? missionName : "unknown");
-
+            haloap::g_quitAfterComplete.store(true);
             // Call the original so the game proceeds normally.
             if (g_originalGameWon) {
                 g_originalGameWon();

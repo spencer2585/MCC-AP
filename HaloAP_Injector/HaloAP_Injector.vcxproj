@@ -22,6 +22,17 @@
     <ClCompile Include="ap_bridge.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pipe_server.cpp" />
+    <ClCompile Include="thirdparty\zlib\adler32.c" />
+    <ClCompile Include="thirdparty\zlib\compress.c" />
+    <ClCompile Include="thirdparty\zlib\crc32.c" />
+    <ClCompile Include="thirdparty\zlib\deflate.c" />
+    <ClCompile Include="thirdparty\zlib\infback.c" />
+    <ClCompile Include="thirdparty\zlib\inffast.c" />
+    <ClCompile Include="thirdparty\zlib\inflate.c" />
+    <ClCompile Include="thirdparty\zlib\inftrees.c" />
+    <ClCompile Include="thirdparty\zlib\trees.c" />
+    <ClCompile Include="thirdparty\zlib\uncompr.c" />
+    <ClCompile Include="thirdparty\zlib\zutil.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ap_bridge.h" />
@@ -88,15 +99,17 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;WSWRAP_NO_SSL;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;WSWRAP_NO_COMPRESSION;NOMINMAX</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;NOMINMAX;OPENSSL_API_COMPAT=0x10100000L</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include;$(ProjectDir)thirdparty\zlib;C:\Program Files\OpenSSL-Win64\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\Program Files\OpenSSL-Win64\lib\VC\x64\MD</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libssl.lib;libcrypto.lib;crypt32.lib;shell32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -105,30 +118,34 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;WSWRAP_NO_SSL;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;WSWRAP_NO_COMPRESSION;NOMINMAX</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;NOMINMAX;OPENSSL_API_COMPAT=0x10100000L</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include;$(ProjectDir)thirdparty\zlib;C:\Program Files\OpenSSL-Win64\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\Program Files\OpenSSL-Win64\lib\VC\x64\MD</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libssl.lib;libcrypto.lib;crypt32.lib;shell32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;WSWRAP_NO_SSL;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;WSWRAP_NO_COMPRESSION;NOMINMAX</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;NOMINMAX;OPENSSL_API_COMPAT=0x10100000L</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include;$(ProjectDir)thirdparty\zlib;C:\Program Files\OpenSSL-Win64\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\Program Files\OpenSSL-Win64\lib\VC\x64\MD</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libssl.lib;libcrypto.lib;crypt32.lib;shell32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -137,15 +154,17 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;WSWRAP_NO_SSL;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;WSWRAP_NO_COMPRESSION;NOMINMAX</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ASIO_STANDALONE;AP_NO_SCHEMA;_WIN32_WINNT=0x0600;WIN32_LEAN_AND_MEAN;NOMINMAX;OPENSSL_API_COMPAT=0x10100000L</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include</AdditionalIncludeDirectories>
-      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(SolutionDir)HaloAP_Shared;$(ProjectDir);$(ProjectDir)thirdparty\wswrap;$(ProjectDir)thirdparty\apclientpp;$(ProjectDir)thirdparty\json\include;$(ProjectDir)thirdparty\websocketpp;$(ProjectDir)thirdparty\asio\include;$(ProjectDir)thirdparty\zlib;C:\Program Files\OpenSSL-Win64\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\Program Files\OpenSSL-Win64\lib\VC\x64\MD</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libssl.lib;libcrypto.lib;crypt32.lib;shell32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

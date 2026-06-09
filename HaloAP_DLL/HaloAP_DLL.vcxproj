@@ -158,7 +158,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
+    <ClInclude Include="hooks\load_level_solo.h" />
     <ClInclude Include="hooks\mission_complete.h" />
+    <ClInclude Include="hooks\mission_id_lookup.h" />
+    <ClInclude Include="hooks\mission_load.h" />
+    <ClInclude Include="hooks\mission_select_block.h" />
+    <ClInclude Include="hooks\shell_command.h" />
+    <ClInclude Include="hooks\shell_level_load.h" />
+    <ClInclude Include="item_handler.h" />
     <ClInclude Include="minhook\MinHook.h" />
     <ClInclude Include="minhook\src\buffer.h" />
     <ClInclude Include="minhook\src\hde\hde32.h" />
@@ -172,7 +179,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="hooks\load_level_solo.cpp" />
     <ClCompile Include="hooks\mission_complete.cpp" />
+    <ClCompile Include="hooks\mission_id_lookup.cpp" />
+    <ClCompile Include="hooks\mission_load.cpp" />
+    <ClCompile Include="hooks\mission_select_block.cpp" />
+    <ClCompile Include="hooks\shell_command.cpp" />
+    <ClCompile Include="hooks\shell_level_load.cpp" />
+    <ClCompile Include="item_handler.cpp" />
     <ClCompile Include="minhook\src\buffer.c" />
     <ClCompile Include="minhook\src\hde\hde32.c" />
     <ClCompile Include="minhook\src\hde\hde64.c" />
