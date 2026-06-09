@@ -8,7 +8,7 @@
 > You may need to restore the exe from quarantine if so
 > 1. if Virus & Threat Protection -> Protection History
 > 2. Find the Exe and restore it
-1. Download the zip file from the github and extract to a folder of your choice.
+1. Download the zip file from the github and extract to a location of your choice.
 2. Generate a game
 3. Run HaloAP_Injector.exe
 4. Enter your room info
