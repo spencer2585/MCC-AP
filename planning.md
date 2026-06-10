@@ -13,5 +13,5 @@
 - add muguffin hunt goal
 - par score checks?
 - par time checks?
--traps
+- traps
 - deathlink
