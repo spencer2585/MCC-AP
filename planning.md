@@ -11,4 +11,7 @@
 - add terminal checks
 - add golden moa checks
 - add muguffin hunt goal
+- par score checks?
+- par time checks?
+-traps
 - deathlink
