@@ -1,6 +1,6 @@
 #pragma once
 
-//shared definitions between HaloAP_Injector and HaloAP_DLL
+//shared definitions between HaloAP_launcher and HaloAP_DLL
 
 namespace haloap {
 	//client version string

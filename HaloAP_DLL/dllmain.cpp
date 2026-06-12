@@ -77,7 +77,7 @@ namespace {
 			printf("MinHook initialized.\n");
 		}
 
-		Sleep(200);
+		Sleep(5000);
 
 		g_pipe = new PipeClient();
 		if (!g_pipe->Connect()) {

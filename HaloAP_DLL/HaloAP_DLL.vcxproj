@@ -148,7 +148,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>;$(ProjectDir)minhook</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>;$(ProjectDir)minhook;$(SolutionDir)HaloAP_Shared</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

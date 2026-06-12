@@ -260,15 +260,15 @@ namespace haloap {
         }
         
         // --- Hook 5: Tick at exe+0x511e3c ---
-        g_tickTarget = (void*)((uint8_t*)exe + 0x511e3c);
-        status = MH_CreateHook(g_tickTarget, (void*)DetourTick, (void**)&g_tickOriginal);
-        if (status == MH_OK) {
-            MH_EnableHook(g_tickTarget);
-            printf("[hook] (mission_select) tick hook installed.\n");
-        } else
-        {
-            printf("[hook] (mission_select) tick hook failed: %d\n", status);
-        }
+        //g_tickTarget = (void*)((uint8_t*)exe + 0x511e3c);
+        //status = MH_CreateHook(g_tickTarget, (void*)DetourTick, (void**)&g_tickOriginal);
+        //if (status == MH_OK) {
+        //    MH_EnableHook(g_tickTarget);
+        //    printf("[hook] (mission_select) tick hook installed.\n");
+        //} else
+        //{
+        //    printf("[hook] (mission_select) tick hook failed: %d\n", status);
+        //}
         
         void* sfTarget = (void*)((uint8_t*)exe + 0x8aaee0);
         MH_CreateHook(sfTarget, (void*)DetourScaleformInvoke, (void**)&g_scaleformOriginal);
