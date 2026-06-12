@@ -6,4 +6,5 @@
   <Project Path="HaloAP_DLL/HaloAP_DLL.vcxproj" Id="889bf6a8-ad9e-4ea0-a7cb-46cb5c229640" />
   <Project Path="HaloAP_Injector/HaloAP_Injector.vcxproj" Id="014121e1-9534-4a20-a1f3-d4e6ff11d997" />
   <Project Path="HaloAP_Shared/HaloAP_Shared.vcxproj" Id="d0343077-e97b-44a9-a245-110a0d63d282" />
+  <Project Path="version_DLL/version_DLL.vcxproj" />
 </Solution>
