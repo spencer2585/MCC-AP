@@ -1,4 +1,5 @@
 ﻿#include "item_handler.h"
+#include "hooks/skull_hook.h"
 #include <cstdio>
 
 namespace haloap {
@@ -15,8 +16,10 @@ namespace haloap {
         //   Two Betrayals    = 108000
         //   Keyes            = 109000
         //   The Maw          = 110000
-        constexpr int CE_OFFSET = 100000;
-        constexpr int MISSION_COUNT = 10;
+        constexpr int CE_OFFSET       = 100000;
+        constexpr int CE_SKULL_OFFSET = 120000;
+        constexpr int MISSION_COUNT   = 10;
+        constexpr int SKULL_DISABLER_COUNT = 21;
     }
 
     void ItemHandler::addItem(int itemID) {
@@ -26,9 +29,17 @@ namespace haloap {
             if (m_unlockedMissions.insert(missionId).second) {
                 printf("[items] Mission %d unlocked (AP item %d)\n", missionId, itemID);
             }
-        } else {
-            printf("[items] Non-mission item received: %d\n", itemID);
+            return;
         }
+
+        int disablerIdx = translateItemToSkullDisabler(itemID);
+        if (disablerIdx >= 0) {
+            printf("[items] Skull disabler idx %d received (AP item %d)\n", disablerIdx, itemID);
+            haloap::DisableSkull(disablerIdx);
+            return;
+        }
+
+        printf("[items] Unknown item received: %d\n", itemID);
     }
 
     bool ItemHandler::isMissionAllowed(int missionId) const {
@@ -51,6 +62,12 @@ namespace haloap {
         if (offset < 1000 || offset > 10000) return -1;
         if (offset % 1000 != 0) return -1;
         return (offset / 1000) - 1;
+    }
+
+    int ItemHandler::translateItemToSkullDisabler(int itemID) const {
+        int idx = itemID - CE_SKULL_OFFSET - 1;
+        if (idx < 0 || idx >= SKULL_DISABLER_COUNT) return -1;
+        return idx;
     }
 
 }  // namespace haloap
