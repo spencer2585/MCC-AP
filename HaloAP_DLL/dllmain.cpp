@@ -102,6 +102,7 @@ namespace {
 		// Initial install of pattern-scanned hooks.
 		HMODULE lastHalo1 = GetModuleHandleA("halo1.dll");
 		if (lastHalo1) {
+			haloap::SetInMission(true);
 			InstallPatternHooks();
 		}
 
@@ -118,11 +119,13 @@ namespace {
 				if (currentHalo1) {
 					printf("[monitor] halo1.dll reloaded at %p (was %p). Reinstalling hooks...\n",
 						currentHalo1, lastHalo1);
+					haloap::SetInMission(true);
 					UninstallAllHooks();
 					InstallPatternHooks();
 				}
 				else {
 					printf("[monitor] halo1.dll unloaded.\n");
+					haloap::SetInMission(false);
 					UninstallAllHooks();
 				}
 				lastHalo1 = currentHalo1;

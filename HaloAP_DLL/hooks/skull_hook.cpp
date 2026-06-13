@@ -117,16 +117,21 @@ static uint64_t* ResolveSkullBitmask() {
     HMODULE exe = GetModuleHandleA("MCC-Win64-Shipping.exe");
     if (!exe) return nullptr;
 
-    uintptr_t p = *reinterpret_cast<uintptr_t*>(
-        reinterpret_cast<uintptr_t>(exe) + 0x4004230);
-    if (!p) return nullptr;
-    p = *reinterpret_cast<uintptr_t*>(p + 0x8);
-    if (!p) return nullptr;
-    p = *reinterpret_cast<uintptr_t*>(p + 0xB8);
-    if (!p) return nullptr;
-    p = *reinterpret_cast<uintptr_t*>(p + 0x20);
-    if (!p) return nullptr;
-    return reinterpret_cast<uint64_t*>(p + 0x708);
+    __try {
+        uintptr_t p = *reinterpret_cast<uintptr_t*>(
+            reinterpret_cast<uintptr_t>(exe) + 0x4004230);
+        if (!p) return nullptr;
+        p = *reinterpret_cast<uintptr_t*>(p + 0x8);
+        if (!p) return nullptr;
+        p = *reinterpret_cast<uintptr_t*>(p + 0xB8);
+        if (!p) return nullptr;
+        p = *reinterpret_cast<uintptr_t*>(p + 0x20);
+        if (!p) return nullptr;
+        return reinterpret_cast<uint64_t*>(p + 0x708);
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {
+        return nullptr;
+    }
 }
 
 namespace haloap {
@@ -149,19 +154,31 @@ namespace {
     std::mutex       g_skullMutex;
     uint64_t         g_forcedMask  = 0;  // skulls forced on by skullsanity tier
     uint64_t         g_disabledMask = 0; // skulls cleared by received disabler items
+    std::atomic<bool> g_inMission{ false };
 
     void DetourOnSkullClaimed(void* a, int skull_id, void* c, void* d, void* e) {
+        printf("[skull] OnSkullClaimed: skull_id=%d a=%p c=%p d=%p e=%p\n",
+            skull_id, a, c, d, e);
+
         if (skull_id >= 1 && skull_id < kSkullIdCount) {
             int locationId = kSkullIdToLocationId[skull_id];
             if (locationId != 0 && g_pipe && g_pipe->IsConnected()) {
                 std::string msg = "LOCATION_CHECKED: " + std::to_string(locationId);
                 g_pipe->SendAsync(msg);
-                printf("[skull] skull_id=%d -> location %d\n", skull_id, locationId);
+                printf("[skull] -> location %d sent\n", locationId);
             } else if (locationId == 0) {
-                printf("[skull] skull_id=%d (unused skull, no location)\n", skull_id);
+                printf("[skull] skull_id=%d (unused, no location)\n", skull_id);
+            } else {
+                printf("[skull] skull_id=%d -> location %d (pipe not connected)\n",
+                    skull_id, locationId);
             }
+        } else {
+            printf("[skull] skull_id=%d out of range [1,%d)\n", skull_id, kSkullIdCount);
         }
+
+        printf("[skull] calling original...\n");
         if (g_origOnSkullClaimed) g_origOnSkullClaimed(a, skull_id, c, d, e);
+        printf("[skull] original returned\n");
     }
 
 }  // namespace
@@ -249,12 +266,34 @@ void ApplyForcedSkulls() {
     }
 
     if (forced == 0) return;
+    if (g_inMission.load()) return;
 
     uint64_t* bitmask = ResolveSkullBitmask();
     if (!bitmask) return;
 
-    // Set bits for forced skulls that have not been disabled by a received item.
-    *bitmask |= (forced & ~disabled);
+    static uint64_t* s_lastBitmaskPtr = nullptr;
+    static uint64_t  s_lastValue      = ~0ULL;
+    if (bitmask != s_lastBitmaskPtr) {
+        printf("[skull] bitmask ptr resolved: %p (value 0x%llx)\n",
+            bitmask, static_cast<unsigned long long>(*bitmask));
+        s_lastBitmaskPtr = bitmask;
+        s_lastValue = ~0ULL;
+    }
+
+    uint64_t toSet = forced & ~disabled;
+    uint64_t current = *bitmask;
+    if ((current & toSet) != toSet) {
+        *bitmask = current | toSet;
+        printf("[skull] forced skulls applied: 0x%llx -> 0x%llx\n",
+            static_cast<unsigned long long>(current),
+            static_cast<unsigned long long>(*bitmask));
+        s_lastValue = *bitmask;
+    }
+}
+
+void SetInMission(bool inMission) {
+    g_inMission.store(inMission);
+    printf("[skull] in-mission: %s\n", inMission ? "true" : "false");
 }
 
 }  // namespace haloap
