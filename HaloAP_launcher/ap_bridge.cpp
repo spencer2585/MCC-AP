@@ -14,6 +14,11 @@ namespace haloap {
     
     void APBridge::ReplayBufferedItems() {
         if (!m_sendToDll) return;
+
+        if (m_skullsanityTier >= 0) {
+            m_sendToDll("SKULLSANITY: " + std::to_string(m_skullsanityTier));
+        }
+
         std::lock_guard<std::mutex> lock(m_itemBufferMutex);
         std::cout << "[ap] replaying " << m_itemBuffer.size() << " buffered items to DLL\n";
         for (int64_t itemId : m_itemBuffer) {
@@ -70,32 +75,39 @@ namespace haloap {
     }
 
     bool APBridge::HandleDllMessage(const std::string& message) {
-        const std::string prefix = "MISSION_COMPLETE: ";
-        if (message.rfind(prefix, 0) != 0) {
-            return false;  // not our message
+        const std::string missionPrefix = "MISSION_COMPLETE: ";
+        if (message.rfind(missionPrefix, 0) == 0) {
+            std::string missionCode = message.substr(missionPrefix.size());
+            const auto& map = GetMissionIdMap();
+            auto it = map.find(missionCode);
+            if (it == map.end()) {
+                std::cerr << "[ap] unknown mission code: " << missionCode << "\n";
+                return true;
+            }
+
+            int64_t locationId = it->second;
+            std::cout << "[ap] MISSION_COMPLETE: " << missionCode
+                << " -> location " << locationId
+                << " (" << GetMissionDisplayName(locationId) << ")\n";
+
+            SendLocation(locationId);
+
+            if (missionCode == "d40") {
+                m_client->StatusUpdate(APClient::ClientStatus::GOAL);
+            }
+
+            return true;
         }
 
-        std::string missionCode = message.substr(prefix.size());
-        const auto& map = GetMissionIdMap();
-        auto it = map.find(missionCode);
-        if (it == map.end()) {
-            std::cerr << "[ap] unknown mission code: " << missionCode << "\n";
-            return true;  // we recognized the message type, just couldn't map it
+        const std::string locationPrefix = "LOCATION_CHECKED: ";
+        if (message.rfind(locationPrefix, 0) == 0) {
+            int64_t locationId = std::stoll(message.substr(locationPrefix.size()));
+            std::cout << "[ap] skull location checked: " << locationId << "\n";
+            SendLocation(locationId);
+            return true;
         }
 
-        int64_t locationId = it->second;
-        std::cout << "[ap] MISSION_COMPLETE: " << missionCode
-            << " -> location " << locationId
-            << " (" << GetMissionDisplayName(locationId) << ")\n";
-
-        SendLocation(locationId);
-        
-        if (missionCode == "d40")
-        {
-            m_client->StatusUpdate(APClient::ClientStatus::GOAL);
-        }
-        
-        return true;
+        return false;
     }
 
     void APBridge::SendLocation(int64_t locationId) {
@@ -148,6 +160,10 @@ namespace haloap {
         std::cout << "[ap] *** slot connected ***\n";
         if (!slotData.empty()) {
             std::cout << "[ap] slot data: " << slotData.dump() << "\n";
+        }
+
+        if (slotData.contains("skullsanity")) {
+            m_skullsanityTier = slotData["skullsanity"].get<int>();
         }
     }
 

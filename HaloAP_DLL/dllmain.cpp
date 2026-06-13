@@ -14,6 +14,7 @@
 #include "hooks/shell_command.h"
 #include "hooks/load_level_solo.h"
 #include "hooks/mission_select_block.h"
+#include "hooks/skull_hook.h"
 
 namespace {
 	std::atomic<bool> g_shutdown{ false };
@@ -48,6 +49,7 @@ namespace {
 		haloap::UninstallMissionLoadHook();
 		haloap::UninstallMissionCompleteHook();
 		haloap::UninstallMissionIdLookupHook();
+		haloap::UninstallSkullHook();
 	}
 
 	// Install all pattern-scanned hooks (requires halo1.dll to be loaded).
@@ -59,6 +61,7 @@ namespace {
 		haloap::InstallMissionIdLookupHook(g_pipe);
 		haloap::InstallMissionLoadHook(g_pipe);
 		haloap::InstallLoadLevelSoloHook(g_pipe);
+		haloap::InstallSkullHook(g_pipe);
 	}
 
 	DWORD WINAPI WorkerMain(LPVOID /*param*/) {
@@ -99,6 +102,7 @@ namespace {
 		// Initial install of pattern-scanned hooks.
 		HMODULE lastHalo1 = GetModuleHandleA("halo1.dll");
 		if (lastHalo1) {
+			haloap::SetInMission(true);
 			InstallPatternHooks();
 		}
 
@@ -115,11 +119,13 @@ namespace {
 				if (currentHalo1) {
 					printf("[monitor] halo1.dll reloaded at %p (was %p). Reinstalling hooks...\n",
 						currentHalo1, lastHalo1);
+					haloap::SetInMission(true);
 					UninstallAllHooks();
 					InstallPatternHooks();
 				}
 				else {
 					printf("[monitor] halo1.dll unloaded.\n");
+					haloap::SetInMission(false);
 					UninstallAllHooks();
 				}
 				lastHalo1 = currentHalo1;
@@ -160,6 +166,8 @@ namespace {
 				std::string msg = "HEARTBEAT: tick " + std::to_string(tick);
 				g_pipe->Send(msg);
 			}
+
+			haloap::ApplyForcedSkulls();
 
 			tick++;
 
