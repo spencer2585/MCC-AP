@@ -1,6 +1,6 @@
 #include "skull_hook.h"
 #include "../minhook/MinHook.h"
-#include "../shared/common.h"
+#include "shared/common.h"
 #include <windows.h>
 #include <cstdint>
 #include <cstdio>
