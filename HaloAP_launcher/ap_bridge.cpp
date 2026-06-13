@@ -14,6 +14,11 @@ namespace haloap {
     
     void APBridge::ReplayBufferedItems() {
         if (!m_sendToDll) return;
+
+        if (m_skullsanityTier >= 0) {
+            m_sendToDll("SKULLSANITY: " + std::to_string(m_skullsanityTier));
+        }
+
         std::lock_guard<std::mutex> lock(m_itemBufferMutex);
         std::cout << "[ap] replaying " << m_itemBuffer.size() << " buffered items to DLL\n";
         for (int64_t itemId : m_itemBuffer) {
@@ -157,9 +162,8 @@ namespace haloap {
             std::cout << "[ap] slot data: " << slotData.dump() << "\n";
         }
 
-        if (m_sendToDll && slotData.contains("skullsanity")) {
-            int tier = slotData["skullsanity"].get<int>();
-            m_sendToDll("SKULLSANITY: " + std::to_string(tier));
+        if (slotData.contains("skullsanity")) {
+            m_skullsanityTier = slotData["skullsanity"].get<int>();
         }
     }
 

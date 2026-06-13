@@ -64,6 +64,7 @@ namespace haloap {
         
         std::mutex m_itemBufferMutex;
         std::vector<int64_t> m_itemBuffer;
+        int m_skullsanityTier{ -1 };
 
         std::atomic<bool> m_socketConnected{ false };
         std::atomic<bool> m_slotConnected{ false };
