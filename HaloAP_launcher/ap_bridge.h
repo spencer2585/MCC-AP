@@ -54,6 +54,7 @@ namespace haloap {
         void OnSlotRefused(const std::list<std::string>& reasons);
         void OnItemsReceived(const std::list<APClient::NetworkItem>& items);
         void OnPrintJson(const APClient::PrintJSONArgs& args);
+        void SendCompletionState();
         
         std::function<void(const std::string&)> m_sendToDll;
 
@@ -72,6 +73,9 @@ namespace haloap {
         // Locations we've sent this session, for deduplication.
         std::mutex m_sentLocationsMutex;
         std::set<int64_t> m_sentLocations;
+        
+        std::set<int64_t> m_checkedLocations;
+        std::mutex m_checkedMutex;
     };
 
 }  // namespace haloap

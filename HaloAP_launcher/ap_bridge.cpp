@@ -3,8 +3,33 @@
 #include "shared/common.h"
 #include <iostream>
 #include <vector>
+#include <set>
+#include <sstream>
+
 
 namespace haloap {
+    
+    static const int64_t COMPLETION_LOCATIONS[] = {
+        101000, 102000, 103000, 104000, 105000,
+        106000, 107000, 108000, 109000
+    };
+    
+    void APBridge::SendCompletionState() {
+        if (!m_sendToDll) return;
+        std::lock_guard<std::mutex> lock(m_checkedMutex);
+    
+        std::string msg = "COMPLETED:";
+        bool first = true;
+        for (int i = 0; i < 9; i++) {
+            if (m_checkedLocations.count(COMPLETION_LOCATIONS[i])) {
+                if (!first) msg += ",";
+                msg += std::to_string(i);
+                first = false;
+            }
+        }
+        m_sendToDll(msg);
+        std::cout << "[ap] Sent completion state: " << msg << "\n";
+    }
 
     APBridge::APBridge() = default;
 
@@ -19,6 +44,8 @@ namespace haloap {
         for (int64_t itemId : m_itemBuffer) {
             m_sendToDll("ITEM_RECIVED: " + std::to_string(itemId));
         }
+        // Also send current completion state
+        SendCompletionState();
     }
 
     bool APBridge::Start(const std::string& serverUri,
@@ -104,7 +131,6 @@ namespace haloap {
             return;
         }
 
-        // Deduplicate within this session.
         {
             std::lock_guard<std::mutex> lock(m_sentLocationsMutex);
             if (!m_sentLocations.insert(locationId).second) {
@@ -116,6 +142,13 @@ namespace haloap {
         std::list<int64_t> locs = { locationId };
         m_client->LocationChecks(locs);
         std::cout << "[ap] sent location check: " << locationId << "\n";
+    
+        // Track completion and notify DLL
+        {
+            std::lock_guard<std::mutex> lock(m_checkedMutex);
+            m_checkedLocations.insert(locationId);
+        }
+        SendCompletionState();
     }
 
     // -------- callbacks ---------
@@ -149,6 +182,16 @@ namespace haloap {
         if (!slotData.empty()) {
             std::cout << "[ap] slot data: " << slotData.dump() << "\n";
         }
+    
+        // Load already-checked locations from server
+        {
+            std::lock_guard<std::mutex> lock(m_checkedMutex);
+            auto checked = m_client->get_checked_locations();
+            for (int64_t locId : checked) {
+                m_checkedLocations.insert(locId);
+            }
+        }
+        SendCompletionState();
     }
 
     void APBridge::OnSlotRefused(const std::list<std::string>& reasons) {

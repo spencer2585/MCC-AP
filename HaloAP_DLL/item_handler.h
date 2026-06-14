@@ -17,10 +17,13 @@ namespace haloap {
 
         // Get the number of currently unlocked missions.
         int getUnlockedCount() const;
+        
+        void setMissionCompletions(const bool completed[9]);
 
     private:
         mutable std::mutex m_mutex;
         std::set<int> m_unlockedMissions;
+        bool m_missionComplete[9] = {};
 
         // Translate AP item ID to mission index (0-9).
         // Returns -1 if the item is not a mission unlock.

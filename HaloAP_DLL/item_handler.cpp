@@ -18,6 +18,8 @@ namespace haloap {
         constexpr int CE_OFFSET = 100000;
         constexpr int MISSION_COUNT = 10;
     }
+    
+    bool m_missionCompleted[9] = {};
 
     void ItemHandler::addItem(int itemID) {
         int missionId = translateItemToMission(itemID);
@@ -31,8 +33,26 @@ namespace haloap {
         }
     }
 
+    void ItemHandler::setMissionCompletions(const bool completed[9]) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (int i = 0; i < 9; i++)
+            m_missionCompleted[i] = completed[i];
+    }
+    
     bool ItemHandler::isMissionAllowed(int missionId) const {
         std::lock_guard<std::mutex> lock(m_mutex);
+        
+        if (missionId < 0 || missionId >=10)
+            return true;
+    
+        // The Maw (mission 9): unlocked when all 9 others are completed
+        if (missionId == 9) {
+            for (int i = 0; i < 9; i++)
+                if (!m_missionCompleted[i]) return false;
+            return true;
+        }
+    
+        // All other missions: unlocked via AP items
         return m_unlockedMissions.count(missionId) > 0;
     }
 
@@ -52,5 +72,7 @@ namespace haloap {
         if (offset % 1000 != 0) return -1;
         return (offset / 1000) - 1;
     }
+    
+    
 
 }  // namespace haloap
