@@ -352,12 +352,12 @@ bool ResolveFName(uint8_t* exe, void* obj, int nameOffset, char* outBuf, int buf
 			//	printf("[UE4] === Search done ===\n\n");
 			//}
 
-			printf("[heartbeat %d] still here\n", tick);
+			//printf("[heartbeat %d] still here\n", tick);
 
-			if (g_pipe && g_pipe->IsConnected()) {
-				std::string msg = "HEARTBEAT: tick " + std::to_string(tick);
-				g_pipe->Send(msg);
-			}
+			//if (g_pipe && g_pipe->IsConnected()) {
+			//	std::string msg = "HEARTBEAT: tick " + std::to_string(tick);
+			//	g_pipe->Send(msg);
+			//}
 
 			tick++;
 
