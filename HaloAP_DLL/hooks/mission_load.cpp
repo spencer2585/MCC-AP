@@ -55,11 +55,11 @@ namespace haloap {
             unsigned int p4, char p5) {
             // Walk up the stack. Skip 1 frame (this detour function itself).
             // Capture up to 10 frames after that.
-            constexpr ULONG kFramesToSkip = 1;
-            constexpr ULONG kFramesToCapture = 32;
-            void* stackFrames[kFramesToCapture] = {};
-            USHORT framesCaptured = RtlCaptureStackBackTrace(
-                kFramesToSkip, kFramesToCapture, stackFrames, nullptr);
+            //constexpr ULONG kFramesToSkip = 1;
+            //constexpr ULONG kFramesToCapture = 32;
+            //void* stackFrames[kFramesToCapture] = {};
+            //USHORT framesCaptured = RtlCaptureStackBackTrace(
+            //    kFramesToSkip, kFramesToCapture, stackFrames, nullptr);
 
             // Log the load itself.
             char buf[1024];
@@ -71,21 +71,21 @@ namespace haloap {
             }
             
             // Log each captured stack frame.
-            for (USHORT i = 0; i < framesCaptured; i++) {
-                ModuleInfo info = IdentifyAddress(stackFrames[i]);
-                char frameBuf[256];
-                snprintf(frameBuf, sizeof(frameBuf),
-                    "  STACK[%u] %s+0x%zx",
-                    i, info.name, info.offset);
-                printf("[hook] %s\n", frameBuf);
-                if (g_pipe && g_pipe->IsConnected()) {
-                    char pipeMsg[300];
-                    snprintf(pipeMsg, sizeof(pipeMsg),
-                        "MISSION_LOAD_FRAME: %u %s+0x%zx",
-                        i, info.name, info.offset);
-                    g_pipe->SendAsync(pipeMsg);
-                }
-            }
+            //for (USHORT i = 0; i < framesCaptured; i++) {
+            //    ModuleInfo info = IdentifyAddress(stackFrames[i]);
+            //    char frameBuf[256];
+            //    snprintf(frameBuf, sizeof(frameBuf),
+            //        "  STACK[%u] %s+0x%zx",
+            //        i, info.name, info.offset);
+            //    printf("[hook] %s\n", frameBuf);
+            //    if (g_pipe && g_pipe->IsConnected()) {
+            //        char pipeMsg[300];
+            //        snprintf(pipeMsg, sizeof(pipeMsg),
+            //            "MISSION_LOAD_FRAME: %u %s+0x%zx",
+            //            i, info.name, info.offset);
+            //        g_pipe->SendAsync(pipeMsg);
+            //    }
+            //}
 
             // ALWAYS call original.
             if (g_originalBeginMissionLoad) {

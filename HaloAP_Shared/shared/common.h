@@ -1,10 +1,10 @@
 #pragma once
 
-//shared definitions between HaloAP_Injector and HaloAP_DLL
+//shared definitions between HaloAP_launcher and HaloAP_DLL
 
 namespace haloap {
 	//client version string
-	constexpr const char* kVersion = "0.0.1";
+	constexpr const char* kVersion = "1.0.1";
 
 	//main executable name on steam
 	constexpr const wchar_t* kMCCExecutableName = L"MCC-Win64-Shipping.exe";

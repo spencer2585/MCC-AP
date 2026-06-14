@@ -28,21 +28,21 @@ namespace haloap {
 
             // Compute caller offset relative to halo1.dll for stable logging
             // across runs (since halo1.dll is ASLR'd).
-            HMODULE halo1 = GetModuleHandleA("halo1.dll");
-            size_t callerOffset = 0;
-            if (halo1) {
-                callerOffset = (size_t)returnAddress - (size_t)halo1;
-            }
+            //HMODULE halo1 = GetModuleHandleA("halo1.dll");
+            //size_t callerOffset = 0;
+            //if (halo1) {
+            //    callerOffset = (size_t)returnAddress - (size_t)halo1;
+            //}
 
             // Build log message.
-            char buf[512];
-            snprintf(buf, sizeof(buf),
-                "MISSION_ID_LOOKUP: path='%s' result=%d caller=halo1.dll+0x%zx",
-                path ? path : "(null)", result, callerOffset);
-            printf("[hook] %s\n", buf);
-            if (g_pipe && g_pipe->IsConnected()) {
-                g_pipe->SendAsync(buf);
-            }
+            //char buf[512];
+            //snprintf(buf, sizeof(buf),
+            //    "MISSION_ID_LOOKUP: path='%s' result=%d caller=halo1.dll+0x%zx",
+            //    path ? path : "(null)", result, callerOffset);
+            //printf("[hook] %s\n", buf);
+            //if (g_pipe && g_pipe->IsConnected()) {
+            //    g_pipe->SendAsync(buf);
+            //}
 
             return result;
         }

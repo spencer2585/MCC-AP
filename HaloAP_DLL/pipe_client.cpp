@@ -191,14 +191,36 @@ void PipeClient::ReaderThreadMain() {
 }
 
 void PipeClient::HandleMessage(const std::string& message) {
-    const std::string prefix = "ITEM_RECIVED: ";
-    if (message.rfind(prefix, 0) == 0)
-    {
-        int itemID = std::atoi(message.c_str() + prefix.size());
+    const std::string itemPrefix = "ITEM_RECIVED: ";
+    const std::string completedPrefix = "COMPLETED:";
+
+    if (message.rfind(itemPrefix, 0) == 0) {
+        int itemID = std::atoi(message.c_str() + itemPrefix.size());
         printf("[pipe] Item received: %d\n", itemID);
         haloap::GetItemHandler().addItem(itemID);
         return;
     }
+
+    if (message.rfind(completedPrefix, 0) == 0) {
+        bool completed[9] = {};
+        std::string data = message.substr(completedPrefix.size());
+        if (!data.empty()) {
+            size_t pos = 0;
+            while (pos < data.size()) {
+                size_t comma = data.find(',', pos);
+                if (comma == std::string::npos) comma = data.size();
+                int idx = std::atoi(data.substr(pos, comma - pos).c_str());
+                if (idx >= 0 && idx < 9) completed[idx] = true;
+                pos = comma + 1;
+            }
+        }
+        haloap::GetItemHandler().setMissionCompletions(completed);
+        int count = 0;
+        for (int i = 0; i < 9; i++) if (completed[i]) count++;
+        printf("[pipe] Mission completions updated: %d/9\n", count);
+        return;
+    }
+
     printf("[pipe <- injector] %s\n", message.c_str());
 }
 
