@@ -94,10 +94,10 @@ static void EnsureHaloAPLoaded() {
     HMODULE h = LoadLibraryA(dllDir);
     
     // Temporary debug popup — remove after testing
-    char msg[512];
-    sprintf_s(msg, sizeof(msg), "Path: %s\nResult: %p\nError: %lu", 
-              dllDir, h, h ? 0 : GetLastError());
-    MessageBoxA(nullptr, msg, "HaloAP Proxy Debug", MB_OK);
+    //char msg[512];
+    //sprintf_s(msg, sizeof(msg), "Path: %s\nResult: %p\nError: %lu", 
+    //          dllDir, h, h ? 0 : GetLastError());
+    //MessageBoxA(nullptr, msg, "HaloAP Proxy Debug", MB_OK);
 }
 
 // Add this call to XInputGetState (called every frame by MCC):
