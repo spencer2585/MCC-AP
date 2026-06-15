@@ -18,7 +18,8 @@
 
 #pragma comment(lib, "psapi.lib")
 
-namespace {
+namespace
+{
 	std::atomic<bool> g_shutdown{ false };
 	HANDLE g_workerThread = nullptr;
 	FILE* g_consoleOut = nullptr;
@@ -42,24 +43,39 @@ namespace {
 		FreeConsole();
 	}
 
-	void UninstallAllHooks() {
-		haloap::UninstallMissionSelectBlockHook();
-		haloap::UninstallShellCommandHook();
-		haloap::UninstallLoadLevelSoloHook();
-		haloap::UninstallShellLevelLoadHook();
-		haloap::UninstallMissionLoadHook();
-		haloap::UninstallMissionCompleteHook();
-		haloap::UninstallMissionIdLookupHook();
-	}
-
-	void InstallPatternHooks() {
-		haloap::InstallMissionSelectBlockHook(g_pipe);
+	void InstallHalo1Hooks() {
 		if (!haloap::InstallMissionCompleteHook(g_pipe)) {
 			printf("Failed to install mission-complete hook.\n");
 		}
 		haloap::InstallMissionIdLookupHook(g_pipe);
 		haloap::InstallMissionLoadHook(g_pipe);
 		haloap::InstallLoadLevelSoloHook(g_pipe);
+	}
+	
+	void UninstallHalo1Hooks()
+	{
+		haloap::UninstallLoadLevelSoloHook();
+		haloap::UninstallMissionLoadHook();
+		haloap::UninstallMissionCompleteHook();
+		haloap::UninstallMissionIdLookupHook();
+	}
+	
+	void UninstallVtableHooks()
+	{
+		haloap::UninstallShellCommandHook();
+		haloap::UninstallShellLevelLoadHook();
+	}
+	
+	void InstallExeHooks()
+	{
+		haloap::InstallMissionSelectBlockHook(g_pipe);
+	}
+	
+	void UninstallAllHooks()
+	{
+		haloap::UninstallMissionSelectBlockHook();
+		UninstallVtableHooks();
+		UninstallHalo1Hooks();
 	}
 
 	// =================================================================
@@ -293,7 +309,8 @@ bool ResolveFName(uint8_t* exe, void* obj, int nameOffset, char* outBuf, int buf
 
 		HMODULE lastHalo1 = GetModuleHandleA("halo1.dll");
 		if (lastHalo1) {
-			InstallPatternHooks();
+			InstallExeHooks();
+			InstallHalo1Hooks();
 		}
 	
 		// Wait for UE4 menu system to fully initialize, then cache button data
@@ -313,12 +330,14 @@ bool ResolveFName(uint8_t* exe, void* obj, int nameOffset, char* outBuf, int buf
 				if (currentHalo1) {
 					printf("[monitor] halo1.dll reloaded at %p (was %p). Reinstalling hooks...\n",
 						currentHalo1, lastHalo1);
-					UninstallAllHooks();
-					InstallPatternHooks();
+					UninstallHalo1Hooks();
+					UninstallVtableHooks();
+					InstallHalo1Hooks();
 				}
 				else {
 					printf("[monitor] halo1.dll unloaded.\n");
-					UninstallAllHooks();
+					UninstallHalo1Hooks();
+					UninstallVtableHooks();
 				}
 				lastHalo1 = currentHalo1;
 				lastEngineObj = nullptr;
@@ -337,9 +356,10 @@ bool ResolveFName(uint8_t* exe, void* obj, int nameOffset, char* outBuf, int buf
 				if (currentEngineObj != lastEngineObj) {
 					printf("[monitor] Engine object changed: %p -> %p. Reinstalling ALL hooks...\n",
 						lastEngineObj, currentEngineObj);
-					UninstallAllHooks();
+					UninstallVtableHooks();
+					UninstallHalo1Hooks();
 					vtableHooksInstalled = false;
-					InstallPatternHooks();
+					InstallHalo1Hooks();
 					lastEngineObj = currentEngineObj;
 				}
 			}
