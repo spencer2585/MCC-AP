@@ -193,6 +193,7 @@ void PipeClient::ReaderThreadMain() {
 void PipeClient::HandleMessage(const std::string& message) {
     const std::string itemPrefix = "ITEM_RECIVED: ";
     const std::string completedPrefix = "COMPLETED:";
+    const std::string finalMissionPrefix = "FINAL_MISSION:";
 
     if (message.rfind(itemPrefix, 0) == 0) {
         int itemID = std::atoi(message.c_str() + itemPrefix.size());
@@ -210,14 +211,22 @@ void PipeClient::HandleMessage(const std::string& message) {
                 size_t comma = data.find(',', pos);
                 if (comma == std::string::npos) comma = data.size();
                 int idx = std::atoi(data.substr(pos, comma - pos).c_str());
-                if (idx >= 0 && idx < 9) completed[idx] = true;
+                if (idx >= 0 && idx < 10) completed[idx] = true;
                 pos = comma + 1;
             }
         }
         haloap::GetItemHandler().setMissionCompletions(completed);
         int count = 0;
-        for (int i = 0; i < 9; i++) if (completed[i]) count++;
+        for (int i = 0; i < 10; i++) if (completed[i]) count++;
         printf("[pipe] Mission completions updated: %d/9\n", count);
+        return;
+    }
+    
+    if (message.rfind(finalMissionPrefix, 0) == 0)
+    {
+        int idx = std::atoi(message.c_str() + finalMissionPrefix.size());
+        haloap::GetItemHandler().setFinalMission(idx);
+        printf("[pipe] Final Mission set to index %d\n", idx);
         return;
     }
 

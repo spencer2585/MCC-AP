@@ -11,7 +11,34 @@ namespace haloap {
     
     static const int64_t COMPLETION_LOCATIONS[] = {
         101000, 102000, 103000, 104000, 105000,
-        106000, 107000, 108000, 109000
+        106000, 107000, 108000, 109000, 110000
+    };
+    
+    std::unordered_map<std::string, int> MISSION_NAME_TO_INDEX = {
+    {"The Pillar of Autumn", 0},
+    {"Halo (CE)", 1},
+    {"Truth and Reconciliation", 2},
+    {"The Silent Cartographer", 3},
+    {"Assault on the Control Room", 4},
+    {"343 Guilty Spark", 5},
+    {"The Library", 6},
+    {"Two Betrayals", 7},
+    {"Keyes", 8},
+    {"The Maw", 9},
+    };  
+    int m_finalMission = 9;
+    
+    std::unordered_map<std::string, int> MISSION_CODE_TO_INDEX = {
+    {"a10", 0},
+    {"a30", 1},
+    {"a50", 2},
+    {"b30", 3},
+    {"b40", 4},
+    {"c10", 5},
+    {"c20", 6},
+    {"c40", 7},
+    {"d20", 8},
+    {"d40", 9},
     };
     
     void APBridge::SendCompletionState() {
@@ -20,7 +47,7 @@ namespace haloap {
     
         std::string msg = "COMPLETED:";
         bool first = true;
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 10; i++) {
             if (m_checkedLocations.count(COMPLETION_LOCATIONS[i])) {
                 if (!first) msg += ",";
                 msg += std::to_string(i);
@@ -29,6 +56,9 @@ namespace haloap {
         }
         m_sendToDll(msg);
         std::cout << "[ap] Sent completion state: " << msg << "\n";
+        
+        m_sendToDll("FINAL_MISSION:" + std::to_string(m_finalMission));
+        std::cout << "[ap] Sent final mission: " << m_finalMission << "\n";
     }
 
     APBridge::APBridge() = default;
@@ -117,7 +147,7 @@ namespace haloap {
 
         SendLocation(locationId);
         
-        if (missionCode == "d40")
+        if (MISSION_CODE_TO_INDEX[missionCode] == m_finalMission)
         {
             m_client->StatusUpdate(APClient::ClientStatus::GOAL);
         }
@@ -191,6 +221,9 @@ namespace haloap {
                 m_checkedLocations.insert(locId);
             }
         }
+        
+        m_finalMission = MISSION_NAME_TO_INDEX[slotData.at("final_mission").get<std::string>()];
+        
         SendCompletionState();
     }
 

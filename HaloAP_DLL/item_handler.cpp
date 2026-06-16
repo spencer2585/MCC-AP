@@ -19,7 +19,7 @@ namespace haloap {
         constexpr int MISSION_COUNT = 10;
     }
     
-    bool m_missionCompleted[9] = {};
+    bool m_missionCompleted[10] = {};
 
     void ItemHandler::addItem(int itemID) {
         int missionId = translateItemToMission(itemID);
@@ -32,23 +32,36 @@ namespace haloap {
             printf("[items] Non-mission item received: %d\n", itemID);
         }
     }
-
-    void ItemHandler::setMissionCompletions(const bool completed[9]) {
+    
+    void ItemHandler::setFinalMission(int idx)
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
-        for (int i = 0; i < 9; i++)
+        if (idx >= 0 && idx < MISSION_COUNT)
+        {
+            m_finalMission = idx;
+            printf("[items] Final mission set to %d\n", idx);
+        }
+    }
+
+    void ItemHandler::setMissionCompletions(const bool completed[10]) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (int i = 0; i < 10; i++)
             m_missionCompleted[i] = completed[i];
     }
     
     bool ItemHandler::isMissionAllowed(int missionId) const {
         std::lock_guard<std::mutex> lock(m_mutex);
         
-        if (missionId < 0 || missionId >=10)
+        if (missionId < 0 || missionId >= 10)
             return true;
     
-        // The Maw (mission 9): unlocked when all 9 others are completed
-        if (missionId == 9) {
-            for (int i = 0; i < 9; i++)
+        // Final Mission unlocked when all 9 others are completed
+        if (missionId == m_finalMission) {
+            for (int i = 0; i < 10; i++)
+            {
+                if (i == m_finalMission) continue;
                 if (!m_missionCompleted[i]) return false;
+            }
             return true;
         }
     
