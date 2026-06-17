@@ -302,6 +302,9 @@ bool ResolveFName(uint8_t* exe, void* obj, int nameOffset, char* outBuf, int buf
 			printf("HELLO send returned %s\n", sendOk ? "true" : "false");
 		}
 
+	haloap::InstallMissionSelectBlockHook(g_pipe);
+	haloap::InitGameModeButtonCollapse();
+	
 		for (int i = 0; i < 50; i++) {
 			if (GetModuleHandleA("halo1.dll")) break;
 			Sleep(100);
@@ -309,7 +312,6 @@ bool ResolveFName(uint8_t* exe, void* obj, int nameOffset, char* outBuf, int buf
 
 		HMODULE lastHalo1 = GetModuleHandleA("halo1.dll");
 		if (lastHalo1) {
-			InstallExeHooks();
 			InstallHalo1Hooks();
 		}
 	

@@ -86,15 +86,22 @@ int main() {
 	// Derive the actual binary directory
 	std::string binDir = gameRoot + "\\MCC\\Binaries\\Win64";
 	std::string exePath = binDir + "\\MCC-Win64-Shipping.exe";
+	bool isWindowsStore = false;
 
 	// Verify the path is correct
 	if (GetFileAttributesA(exePath.c_str()) == INVALID_FILE_ATTRIBUTES) {
-		std::cerr << "Could not find MCC executable at:\n  " << exePath << "\n";
-		std::cerr << "Check your game directory path.\n";
-		// Clear saved path so they can re-enter next time
-		SaveGameDir("");
-		std::cin.get();
-		return 1;
+		std::string windowsExePath = binDir + "\\MCCWinStore-Win64-Shipping.exe";
+		if (GetFileAttributesA(windowsExePath.c_str()) == INVALID_FILE_ATTRIBUTES)
+		{
+			std::cerr << "Could not find MCC executable";
+			std::cerr << "Check your game directory path.\n";
+			// Clear saved path so they can re-enter next time
+			SaveGameDir("");
+			std::cin.get();
+			return 1;
+		}
+		isWindowsStore = true;
+		exePath = windowsExePath;
 	}
 
 	// 2. Start the AP bridge and wait for initial connection.
@@ -148,42 +155,120 @@ int main() {
 	});
 
 	// Copy mod DLLs to game directory
-	std::cout << "Copying mod files to game directory...\n";
+	std::cout << "Setting up mod files...\n";
 
 	char launcherPath[MAX_PATH];
 	GetModuleFileNameA(nullptr, launcherPath, MAX_PATH);
 	std::string launcherDir = std::string(launcherPath);
 	launcherDir = launcherDir.substr(0, launcherDir.find_last_of('\\') + 1);
 
-	std::string srcProxy = launcherDir + "xinput1_3.dll";
+	std::string srcProxy = launcherDir + "bink2w64.dll";
 	std::string srcHaloAP = launcherDir + "HaloAP.dll";
-	std::string dstProxy = binDir + "\\xinput1_3.dll";
+	std::string dstProxy = binDir + "\\bink2w64.dll";
+	std::string gameBinkOriginal = binDir + "\\bink2w64_original.dll";
 	std::string dstHaloAP = binDir + "\\HaloAP.dll";
 
-	if (!CopyFileA(srcProxy.c_str(), dstProxy.c_str(), FALSE)) {
-		std::cerr << "Failed to copy xinput1_3.dll (error " << GetLastError() << ")\n";
-		pipe.Stop();
-		apShutdown.store(true);
-		if (apPollThread.joinable()) apPollThread.join();
-		std::cin.get();
-		return 1;
+	// Check if original was already renamed (unclean exit)
+	bool alreadyRenamed = (GetFileAttributesA(gameBinkOriginal.c_str()) != INVALID_FILE_ATTRIBUTES);
+	bool elevatedSetup = false;
+	
+	if (!alreadyRenamed) {
+		// Try to rename real bink2w64.dll to bink2w64_original.dll
+		if (!MoveFileA(dstProxy.c_str(), gameBinkOriginal.c_str())) {
+			if (isWindowsStore) {
+				std::cout << "Requesting admin permissions for mod installation...\n";
+    
+				// Do rename + both copies in one elevated command
+				std::string cmd = "/c move \"" + dstProxy + "\" \"" + gameBinkOriginal + 
+					"\" && copy /y \"" + srcProxy + "\" \"" + dstProxy + 
+					"\" && copy /y \"" + srcHaloAP + "\" \"" + dstHaloAP + "\"";
+    
+				SHELLEXECUTEINFOA sei = {};
+				sei.cbSize = sizeof(sei);
+				sei.lpVerb = "runas";
+				sei.lpFile = "cmd.exe";
+				sei.lpParameters = cmd.c_str();
+				sei.nShow = SW_HIDE;
+				sei.fMask = SEE_MASK_NOCLOSEPROCESS;
+    
+				if (!ShellExecuteExA(&sei)) {
+					std::cerr << "Failed to elevate. Run the launcher as administrator.\n";
+					pipe.Stop();
+					apShutdown.store(true);
+					if (apPollThread.joinable()) apPollThread.join();
+					std::cin.get();
+					return 1;
+				}
+    
+				WaitForSingleObject(sei.hProcess, 10000);
+				CloseHandle(sei.hProcess);
+    
+				if (GetFileAttributesA(gameBinkOriginal.c_str()) == INVALID_FILE_ATTRIBUTES) {
+					std::cerr << "Mod installation failed even with admin rights.\n";
+					pipe.Stop();
+					apShutdown.store(true);
+					if (apPollThread.joinable()) apPollThread.join();
+					std::cin.get();
+					return 1;
+				}
+				elevatedSetup = true;
+				std::cout << "  Mod files installed with admin rights.\n";
+			} else {
+				std::cerr << "Failed to rename bink2w64.dll (error " << GetLastError() << ")\n";
+				std::cerr << "Make sure MCC is not running.\n";
+				pipe.Stop();
+				apShutdown.store(true);
+				if (apPollThread.joinable()) apPollThread.join();
+				std::cin.get();
+				return 1;
+			}
+		} else {
+			std::cout << "  Renamed bink2w64.dll -> bink2w64_original.dll\n";
+		}
+	} else {
+		std::cout << "  bink2w64_original.dll already exists (recovering from previous run)\n";
 	}
-	std::cout << "  Copied xinput1_3.dll\n";
 
-	if (!CopyFileA(srcHaloAP.c_str(), dstHaloAP.c_str(), FALSE)) {
-		std::cerr << "Failed to copy HaloAP.dll (error " << GetLastError() << ")\n";
-		DeleteFileA(dstProxy.c_str()); // clean up the proxy we just copied
-		pipe.Stop();
-		apShutdown.store(true);
-		if (apPollThread.joinable()) apPollThread.join();
-		std::cin.get();
-		return 1;
+	// Copy proxy and HaloAP.dll (skip if elevated setup already did it)
+	if (!elevatedSetup) {
+		if (!CopyFileA(srcProxy.c_str(), dstProxy.c_str(), FALSE)) {
+			std::cerr << "Failed to copy proxy bink2w64.dll (error " << GetLastError() << ")\n";
+			if (!alreadyRenamed) {
+				MoveFileA(gameBinkOriginal.c_str(), dstProxy.c_str());
+			}
+			pipe.Stop();
+			apShutdown.store(true);
+			if (apPollThread.joinable()) apPollThread.join();
+			std::cin.get();
+			return 1;
+		}
+		std::cout << "  Copied proxy bink2w64.dll\n";
+
+		if (!CopyFileA(srcHaloAP.c_str(), dstHaloAP.c_str(), FALSE)) {
+			std::cerr << "Failed to copy HaloAP.dll (error " << GetLastError() << ")\n";
+			DeleteFileA(dstProxy.c_str());
+			if (!alreadyRenamed) {
+				MoveFileA(gameBinkOriginal.c_str(), dstProxy.c_str());
+			}
+			pipe.Stop();
+			apShutdown.store(true);
+			if (apPollThread.joinable()) apPollThread.join();
+			std::cin.get();
+			return 1;
+		}
+		std::cout << "  Copied HaloAP.dll\n";
 	}
-	std::cout << "  Copied HaloAP.dll\n\n";
+	std::cout << "\n";
 
-	// Launch MCC without anti-cheat via Steam
-	std::cout << "Launching MCC (anti-cheat disabled)...\n";
-	ShellExecuteA(nullptr, "open", "steam://launch/976730/option2", nullptr, nullptr, SW_SHOWNORMAL);
+	// Launch MCC
+	if (isWindowsStore) {
+		std::cout << "Launching MCC (Windows Store, anti-cheat disabled)...\n";
+		std::cout << "Please launch MCC with anti-cheat off from the Start menu if it doesn't start automatically.\n";
+		ShellExecuteA(nullptr, "open", exePath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+	} else {
+		std::cout << "Launching MCC (anti-cheat disabled)...\n";
+		ShellExecuteA(nullptr, "open", "steam://launch/976730/option2", nullptr, nullptr, SW_SHOWNORMAL);
+	}
 
 	// Wait for DLL to connect via pipe
 	std::cout << "Waiting for DLL to connect...\n";
@@ -220,23 +305,62 @@ int main() {
 		std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	}
 
-	// Clean up DLLs from game directory
+	// Clean up: restore original bink2w64.dll
 	std::cout << "\nCleaning up mod files...\n";
-	std::string proxyPath = binDir + "\\xinput1_3.dll";
-	std::string haloAPPath = binDir + "\\HaloAP.dll";
 
 	// Small delay to let MCC fully release the files
 	std::this_thread::sleep_for(std::chrono::seconds(2));
 
-	if (DeleteFileA(proxyPath.c_str())) {
-		std::cout << "  Removed xinput1_3.dll\n";
+	bool cleanupOk = true;
+
+	// Try normal cleanup first
+	if (DeleteFileA(dstProxy.c_str())) {
+		std::cout << "  Removed proxy bink2w64.dll\n";
+		if (MoveFileA(gameBinkOriginal.c_str(), dstProxy.c_str())) {
+			std::cout << "  Restored original bink2w64.dll\n";
+		} else {
+			cleanupOk = false;
+		}
 	} else {
-		std::cerr << "  Failed to remove xinput1_3.dll (error " << GetLastError() << ")\n";
+		cleanupOk = false;
 	}
-	if (DeleteFileA(haloAPPath.c_str())) {
+
+	bool haloAPRemoved = DeleteFileA(dstHaloAP.c_str());
+	if (haloAPRemoved) {
 		std::cout << "  Removed HaloAP.dll\n";
 	} else {
-		std::cerr << "  Failed to remove HaloAP.dll (error " << GetLastError() << ")\n";
+		cleanupOk = false;
+	}
+
+	// If normal cleanup failed on Windows Store, try elevated
+	if (!cleanupOk && isWindowsStore) {
+		std::cout << "  Requesting admin permissions for cleanup...\n";
+
+		std::string cmd = "/c del /f \"" + dstProxy + "\" && move \"" + gameBinkOriginal + 
+			"\" \"" + dstProxy + "\"";
+		if (!haloAPRemoved) {
+			cmd += " && del /f \"" + dstHaloAP + "\"";
+		}
+
+		SHELLEXECUTEINFOA sei = {};
+		sei.cbSize = sizeof(sei);
+		sei.lpVerb = "runas";
+		sei.lpFile = "cmd.exe";
+		sei.lpParameters = cmd.c_str();
+		sei.nShow = SW_HIDE;
+		sei.fMask = SEE_MASK_NOCLOSEPROCESS;
+
+		if (ShellExecuteExA(&sei)) {
+			WaitForSingleObject(sei.hProcess, 10000);
+			CloseHandle(sei.hProcess);
+			std::cout << "  Cleanup completed with admin rights.\n";
+		} else {
+			std::cerr << "  Failed to elevate for cleanup.\n";
+			std::cerr << "  Manually rename bink2w64_original.dll back to bink2w64.dll\n";
+		}
+	} else if (!cleanupOk) {
+		std::cerr << "  Some cleanup failed. Files may still be in use.\n";
+		std::cerr << "  Manually rename bink2w64_original.dll back to bink2w64.dll after MCC closes.\n";
 	}
 
 	// Shut down

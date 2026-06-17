@@ -1,129 +1,100 @@
-#include <Windows.h>
-#include <stdio.h>
-// ============================================================
-// xinput1_3.dll proxy (runtime forwarding)
-//
-// XInput has only 8 exports — simplest possible proxy.
-// ============================================================
+#include <windows.h>
 
-static HMODULE s_realXInput = nullptr;
-static FARPROC s_funcs[8] = {};
+// Forward all exports to the renamed original DLL
+// Ordinals must match exactly (note: @10 is unused in the original)
+#pragma comment(linker, "/export:BinkAllocateFrameBuffers=bink2w64_original.BinkAllocateFrameBuffers,@1")
+#pragma comment(linker, "/export:BinkClose=bink2w64_original.BinkClose,@2")
+#pragma comment(linker, "/export:BinkCloseTrack=bink2w64_original.BinkCloseTrack,@3")
+#pragma comment(linker, "/export:BinkControlBackgroundIO=bink2w64_original.BinkControlBackgroundIO,@4")
+#pragma comment(linker, "/export:BinkCopyToBuffer=bink2w64_original.BinkCopyToBuffer,@5")
+#pragma comment(linker, "/export:BinkCopyToBufferRect=bink2w64_original.BinkCopyToBufferRect,@6")
+#pragma comment(linker, "/export:BinkDoFrame=bink2w64_original.BinkDoFrame,@7")
+#pragma comment(linker, "/export:BinkDoFrameAsync=bink2w64_original.BinkDoFrameAsync,@8")
+#pragma comment(linker, "/export:BinkDoFrameAsyncMulti=bink2w64_original.BinkDoFrameAsyncMulti,@9")
+#pragma comment(linker, "/export:BinkDoFrameAsyncWait=bink2w64_original.BinkDoFrameAsyncWait,@10")
+#pragma comment(linker, "/export:BinkDoFramePlane=bink2w64_original.BinkDoFramePlane,@11")
+#pragma comment(linker, "/export:BinkFindXAudio2WinDevice=bink2w64_original.BinkFindXAudio2WinDevice,@12")
+#pragma comment(linker, "/export:BinkFreeGlobals=bink2w64_original.BinkFreeGlobals,@13")
+#pragma comment(linker, "/export:BinkGetError=bink2w64_original.BinkGetError,@14")
+#pragma comment(linker, "/export:BinkGetFrameBuffersInfo=bink2w64_original.BinkGetFrameBuffersInfo,@15")
+#pragma comment(linker, "/export:BinkGetGPUDataBuffersInfo=bink2w64_original.BinkGetGPUDataBuffersInfo,@16")
+#pragma comment(linker, "/export:BinkGetKeyFrame=bink2w64_original.BinkGetKeyFrame,@17")
+#pragma comment(linker, "/export:BinkGetPlatformInfo=bink2w64_original.BinkGetPlatformInfo,@18")
+#pragma comment(linker, "/export:BinkGetRealtime=bink2w64_original.BinkGetRealtime,@19")
+#pragma comment(linker, "/export:BinkGetRects=bink2w64_original.BinkGetRects,@20")
+#pragma comment(linker, "/export:BinkGetSummary=bink2w64_original.BinkGetSummary,@21")
+#pragma comment(linker, "/export:BinkGetTrackData=bink2w64_original.BinkGetTrackData,@22")
+#pragma comment(linker, "/export:BinkGetTrackID=bink2w64_original.BinkGetTrackID,@23")
+#pragma comment(linker, "/export:BinkGetTrackMaxSize=bink2w64_original.BinkGetTrackMaxSize,@24")
+#pragma comment(linker, "/export:BinkGetTrackType=bink2w64_original.BinkGetTrackType,@25")
+#pragma comment(linker, "/export:BinkGoto=bink2w64_original.BinkGoto,@26")
+#pragma comment(linker, "/export:BinkLogoAddress=bink2w64_original.BinkLogoAddress,@27")
+#pragma comment(linker, "/export:BinkNextFrame=bink2w64_original.BinkNextFrame,@28")
+#pragma comment(linker, "/export:BinkOpen=bink2w64_original.BinkOpen,@29")
+#pragma comment(linker, "/export:BinkOpenDirectSound=bink2w64_original.BinkOpenDirectSound,@30")
+#pragma comment(linker, "/export:BinkOpenMiles=bink2w64_original.BinkOpenMiles,@31")
+#pragma comment(linker, "/export:BinkOpenTrack=bink2w64_original.BinkOpenTrack,@32")
+#pragma comment(linker, "/export:BinkOpenWaveOut=bink2w64_original.BinkOpenWaveOut,@33")
+#pragma comment(linker, "/export:BinkOpenWithOptions=bink2w64_original.BinkOpenWithOptions,@34")
+#pragma comment(linker, "/export:BinkOpenXAudio2=bink2w64_original.BinkOpenXAudio2,@35")
+#pragma comment(linker, "/export:BinkOpenXAudio27=bink2w64_original.BinkOpenXAudio27,@36")
+#pragma comment(linker, "/export:BinkOpenXAudio28=bink2w64_original.BinkOpenXAudio28,@37")
+#pragma comment(linker, "/export:BinkPause=bink2w64_original.BinkPause,@38")
+#pragma comment(linker, "/export:BinkRegisterFrameBuffers=bink2w64_original.BinkRegisterFrameBuffers,@39")
+#pragma comment(linker, "/export:BinkRegisterGPUDataBuffers=bink2w64_original.BinkRegisterGPUDataBuffers,@40")
+#pragma comment(linker, "/export:BinkRequestStopAsyncThread=bink2w64_original.BinkRequestStopAsyncThread,@41")
+#pragma comment(linker, "/export:BinkRequestStopAsyncThreadsMulti=bink2w64_original.BinkRequestStopAsyncThreadsMulti,@42")
+#pragma comment(linker, "/export:BinkService=bink2w64_original.BinkService,@43")
+#pragma comment(linker, "/export:BinkSetError=bink2w64_original.BinkSetError,@44")
+#pragma comment(linker, "/export:BinkSetFileOffset=bink2w64_original.BinkSetFileOffset,@45")
+#pragma comment(linker, "/export:BinkSetFrameRate=bink2w64_original.BinkSetFrameRate,@46")
+#pragma comment(linker, "/export:BinkSetIO=bink2w64_original.BinkSetIO,@47")
+#pragma comment(linker, "/export:BinkSetIOSize=bink2w64_original.BinkSetIOSize,@48")
+#pragma comment(linker, "/export:BinkSetMemory=bink2w64_original.BinkSetMemory,@49")
+#pragma comment(linker, "/export:BinkSetOSFileCallbacks=bink2w64_original.BinkSetOSFileCallbacks,@50")
+#pragma comment(linker, "/export:BinkSetPan=bink2w64_original.BinkSetPan,@51")
+#pragma comment(linker, "/export:BinkSetSimulate=bink2w64_original.BinkSetSimulate,@52")
+#pragma comment(linker, "/export:BinkSetSoundOnOff=bink2w64_original.BinkSetSoundOnOff,@53")
+#pragma comment(linker, "/export:BinkSetSoundSystem=bink2w64_original.BinkSetSoundSystem,@54")
+#pragma comment(linker, "/export:BinkSetSoundSystem2=bink2w64_original.BinkSetSoundSystem2,@55")
+#pragma comment(linker, "/export:BinkSetSoundTrack=bink2w64_original.BinkSetSoundTrack,@56")
+#pragma comment(linker, "/export:BinkSetSpeakerVolumes=bink2w64_original.BinkSetSpeakerVolumes,@57")
+#pragma comment(linker, "/export:BinkSetVideoOnOff=bink2w64_original.BinkSetVideoOnOff,@58")
+#pragma comment(linker, "/export:BinkSetVolume=bink2w64_original.BinkSetVolume,@59")
+#pragma comment(linker, "/export:BinkSetWillLoop=bink2w64_original.BinkSetWillLoop,@60")
+#pragma comment(linker, "/export:BinkShouldSkip=bink2w64_original.BinkShouldSkip,@61")
+#pragma comment(linker, "/export:BinkStartAsyncThread=bink2w64_original.BinkStartAsyncThread,@62")
+#pragma comment(linker, "/export:BinkUtilCPUs=bink2w64_original.BinkUtilCPUs,@63")
+#pragma comment(linker, "/export:BinkUtilFree=bink2w64_original.BinkUtilFree,@64")
+#pragma comment(linker, "/export:BinkUtilMalloc=bink2w64_original.BinkUtilMalloc,@65")
+#pragma comment(linker, "/export:BinkUtilMutexCreate=bink2w64_original.BinkUtilMutexCreate,@66")
+#pragma comment(linker, "/export:BinkUtilMutexDestroy=bink2w64_original.BinkUtilMutexDestroy,@67")
+#pragma comment(linker, "/export:BinkUtilMutexLock=bink2w64_original.BinkUtilMutexLock,@68")
+#pragma comment(linker, "/export:BinkUtilMutexLockTimeOut=bink2w64_original.BinkUtilMutexLockTimeOut,@69")
+#pragma comment(linker, "/export:BinkUtilMutexUnlock=bink2w64_original.BinkUtilMutexUnlock,@70")
+#pragma comment(linker, "/export:BinkUtilSoundGlobalLock=bink2w64_original.BinkUtilSoundGlobalLock,@71")
+#pragma comment(linker, "/export:BinkUtilSoundGlobalUnlock=bink2w64_original.BinkUtilSoundGlobalUnlock,@72")
+#pragma comment(linker, "/export:BinkWait=bink2w64_original.BinkWait,@73")
+#pragma comment(linker, "/export:BinkWaitStopAsyncThread=bink2w64_original.BinkWaitStopAsyncThread,@74")
+#pragma comment(linker, "/export:BinkWaitStopAsyncThreadsMulti=bink2w64_original.BinkWaitStopAsyncThreadsMulti,@75")
+#pragma comment(linker, "/export:RADTimerRead=bink2w64_original.RADTimerRead,@76")
 
-static const char* s_funcNames[] = {
-    "XInputGetState",                      // 0
-    "XInputSetState",                      // 1
-    "XInputGetCapabilities",               // 2
-    "XInputEnable",                        // 3
-    "XInputGetDSoundAudioDeviceGuids",     // 4
-    "XInputGetBatteryInformation",         // 5
-    "XInputGetKeystroke",                  // 6
-    "XInputGetAudioDeviceIds",             // 7
-};
-
-static bool LoadRealXInput() {
-    char systemDir[MAX_PATH];
-    GetSystemDirectoryA(systemDir, MAX_PATH);
-    strcat_s(systemDir, "\\xinput1_3.dll");
-    s_realXInput = LoadLibraryA(systemDir);
-    if (!s_realXInput) return false;
-    for (int i = 0; i < 8; i++) {
-        s_funcs[i] = GetProcAddress(s_realXInput, s_funcNames[i]);
-    }
-    return true;
-}
-
-extern "C" {
-
-// DWORD XInputSetState(DWORD dwUserIndex, XINPUT_VIBRATION* pVibration)
-__declspec(dllexport) DWORD WINAPI Proxy_XInputSetState(DWORD a, void* b) {
-    typedef DWORD(WINAPI* F)(DWORD, void*);
-    return s_funcs[1] ? ((F)s_funcs[1])(a, b) : ERROR_DEVICE_NOT_CONNECTED;
-}
-
-// DWORD XInputGetCapabilities(DWORD dwUserIndex, DWORD dwFlags, XINPUT_CAPABILITIES* pCaps)
-__declspec(dllexport) DWORD WINAPI Proxy_XInputGetCapabilities(DWORD a, DWORD b, void* c) {
-    typedef DWORD(WINAPI* F)(DWORD, DWORD, void*);
-    return s_funcs[2] ? ((F)s_funcs[2])(a, b, c) : ERROR_DEVICE_NOT_CONNECTED;
-}
-
-// void XInputEnable(BOOL enable)
-__declspec(dllexport) void WINAPI Proxy_XInputEnable(BOOL a) {
-    typedef void(WINAPI* F)(BOOL);
-    if (s_funcs[3]) ((F)s_funcs[3])(a);
-}
-
-// DWORD XInputGetDSoundAudioDeviceGuids(DWORD, GUID*, GUID*)
-__declspec(dllexport) DWORD WINAPI Proxy_XInputGetDSoundAudioDeviceGuids(DWORD a, void* b, void* c) {
-    typedef DWORD(WINAPI* F)(DWORD, void*, void*);
-    return s_funcs[4] ? ((F)s_funcs[4])(a, b, c) : ERROR_DEVICE_NOT_CONNECTED;
-}
-
-// DWORD XInputGetBatteryInformation(DWORD, BYTE, XINPUT_BATTERY_INFORMATION*)
-__declspec(dllexport) DWORD WINAPI Proxy_XInputGetBatteryInformation(DWORD a, BYTE b, void* c) {
-    typedef DWORD(WINAPI* F)(DWORD, BYTE, void*);
-    return s_funcs[5] ? ((F)s_funcs[5])(a, b, c) : ERROR_DEVICE_NOT_CONNECTED;
-}
-
-// DWORD XInputGetKeystroke(DWORD, DWORD, PXINPUT_KEYSTROKE)
-__declspec(dllexport) DWORD WINAPI Proxy_XInputGetKeystroke(DWORD a, DWORD b, void* c) {
-    typedef DWORD(WINAPI* F)(DWORD, DWORD, void*);
-    return s_funcs[6] ? ((F)s_funcs[6])(a, b, c) : ERROR_DEVICE_NOT_CONNECTED;
-}
-
-// DWORD XInputGetAudioDeviceIds(DWORD, LPWSTR, UINT*, LPWSTR, UINT*)
-__declspec(dllexport) DWORD WINAPI Proxy_XInputGetAudioDeviceIds(DWORD a, void* b, void* c, void* d, void* e) {
-    typedef DWORD(WINAPI* F)(DWORD, void*, void*, void*, void*);
-    return s_funcs[7] ? ((F)s_funcs[7])(a, b, c, d, e) : ERROR_DEVICE_NOT_CONNECTED;
-}
-
-} // extern "C"
-
-static HMODULE s_proxyModule = nullptr;
-static bool s_haloLoaded = false;
-
-static void EnsureHaloAPLoaded() {
-    if (s_haloLoaded) return;
-    s_haloLoaded = true;
-    
-    char dllDir[MAX_PATH];
-    GetModuleFileNameA(s_proxyModule, dllDir, MAX_PATH);
-    char* lastSlash = strrchr(dllDir, '\\');
-    if (lastSlash) *(lastSlash + 1) = '\0';
-    strcat_s(dllDir, "HaloAP.dll");
-    
-    HMODULE h = LoadLibraryA(dllDir);
-    
-    // Temporary debug popup — remove after testing
-    //char msg[512];
-    //sprintf_s(msg, sizeof(msg), "Path: %s\nResult: %p\nError: %lu", 
-    //          dllDir, h, h ? 0 : GetLastError());
-    //MessageBoxA(nullptr, msg, "HaloAP Proxy Debug", MB_OK);
-}
-
-// Add this call to XInputGetState (called every frame by MCC):
-__declspec(dllexport) DWORD WINAPI Proxy_XInputGetState(DWORD a, void* b) {
-    EnsureHaloAPLoaded();
-    typedef DWORD(WINAPI* F)(DWORD, void*);
-    return s_funcs[0] ? ((F)s_funcs[0])(a, b) : ERROR_DEVICE_NOT_CONNECTED;
-}
-
-// DllMain just loads the real xinput and saves the module handle:
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(hModule);
-        if (!LoadRealXInput()) return FALSE;
 
-        char dllDir[MAX_PATH];
-        GetModuleFileNameA(hModule, dllDir, MAX_PATH);
-        char* lastSlash = strrchr(dllDir, '\\');
-        if (lastSlash) *(lastSlash + 1) = '\0';
-        strcat_s(dllDir, "HaloAP.dll");
-        LoadLibraryA(dllDir);
-    }
-    else if (reason == DLL_PROCESS_DETACH) {
-        if (s_realXInput) {
-            FreeLibrary(s_realXInput);
-            s_realXInput = nullptr;
+        // Get the directory this proxy DLL lives in
+        char path[MAX_PATH];
+        GetModuleFileNameA(hModule, path, MAX_PATH);
+        char* lastSlash = strrchr(path, '\\');
+        if (lastSlash) {
+            *(lastSlash + 1) = '\0';
+            strcat_s(path, "HaloAP.dll");
+        }
+
+        HMODULE hap = LoadLibraryA(path);
+        if (!hap) {
+            hap = LoadLibraryA("HaloAP.dll");
         }
     }
     return TRUE;

@@ -13,11 +13,21 @@ namespace haloap {
     namespace
     {
         // =================================================================
-        // UE4 constants
+        // UE4 pattern scan constants
         // =================================================================
-#define UE4_GUOBJECTARRAY_OFFSET 0x3E389B0
-#define UE4_FNAME_TOSTRING_OFFSET 0xD3BF38
-#define UE4_GMALLOC_OFFSET 0x3D32858
+        const char* kFNameToStringPattern =
+            "40 57 48 83 ec ? 48 c7 44 24 ? fe ff ff ff 48 89 5c 24 ? "
+            "48 8b da 48 8b f9 83 79 04 00";
+
+        const char* kGUObjectArrayRefPattern =
+            "84 c0 0f 84 ? ? ? ? 40 38 3d ? ? ? ? 74 ? "
+            "48 8d 0d ? ? ? ? e8 ? ? ? ?";
+
+        // =================================================================
+        // Resolved UE4 addresses (populated at init)
+        // =================================================================
+        void* g_fnameToString = nullptr;
+        uint8_t* g_guobjectArray = nullptr;
 
         // =================================================================
         // UE4 FName resolver
@@ -30,8 +40,9 @@ namespace haloap {
         };
         
         bool ResolveFName(uint8_t* exe, void* obj, int nameOffset, char* outBuf, int bufSize) {
+            if (!g_fnameToString) { outBuf[0] = '?'; outBuf[1] = 0; return false; }
             typedef void (*FNameToStringFn)(void* fname, FString* out);
-            auto ToString = (FNameToStringFn)(exe + UE4_FNAME_TOSTRING_OFFSET);
+            auto ToString = (FNameToStringFn)g_fnameToString;
             FString result = {};
             __try {
                 ToString((uint8_t*)obj + nameOffset, &result);
@@ -47,15 +58,88 @@ namespace haloap {
         }
 
         // =================================================================
-        // HOOK 1: Chapter tab setup (FUN_14050bdc0)
+        // Resolve UE4 addresses via pattern scan
         // =================================================================
+        bool ResolveUE4Addresses() {
+            HMODULE exe = GetModuleHandleA(nullptr);
+            if (!exe) return false;
+
+            // Resolve FName::ToString
+            g_fnameToString = FindPatternInModule(exe, kFNameToStringPattern);
+            if (!g_fnameToString) {
+                printf("[hook] FName::ToString pattern not found\n");
+                return false;
+            }
+            printf("[hook] FName::ToString at %p\n", g_fnameToString);
+
+            // Resolve GUObjectArray via reference function
+            uint8_t* guobjectRef = (uint8_t*)FindPatternInModule(exe, kGUObjectArrayRefPattern);
+            if (!guobjectRef) {
+                printf("[hook] GUObjectArray reference pattern not found\n");
+                return false;
+            }
+            // Pattern: 84 c0 (2) | 0f 84 ???? (6) | 40 38 3d ???? (7) | 74 ? (2) | 48 8d 0d ???? (7) | e8 ???? (5)
+            // LEA RCX,[rip+offset] starts at byte 17, offset bytes at byte 20
+            int32_t ripOffset = *(int32_t*)(guobjectRef + 20);
+            uint8_t* nextInstr = guobjectRef + 24; // LEA is 7 bytes, ends at 17+7=24
+            g_guobjectArray = nextInstr + ripOffset;
+            printf("[hook] GUObjectArray at %p\n", g_guobjectArray);
+
+            return true;
+        }
+
+        // =================================================================
+        // Helper: iterate UObjects using direct chunk access
+        // =================================================================
+        // Callback receives (exe, obj) and returns true to stop iteration
+        typedef bool (*UObjectVisitorFn)(uint8_t* exe, void* obj, void* userData);
+
+        void ForEachUObject(uint8_t* exe, UObjectVisitorFn visitor, void* userData) {
+            if (!g_guobjectArray) return;
+            void** Objects = *(void***)(g_guobjectArray + 0x10);
+            int numElements = *(int*)(g_guobjectArray + 0x24);
+            int numChunks = *(int*)(g_guobjectArray + 0x2C);
+            if (!Objects || numElements <= 0) return;
+
+            int remaining = numElements;
+            for (int c = 0; c < numChunks && remaining > 0; c++) {
+                if (!Objects[c]) { remaining -= 0x10000; continue; }
+                uint8_t* chunk = (uint8_t*)Objects[c];
+                int itemsInChunk = (remaining > 0x10000) ? 0x10000 : remaining;
+
+                for (int n = 0; n < itemsInChunk; n++) {
+                    void* obj = *(void**)(chunk + (n * 0x18));
+                    if (!obj) continue;
+                    __try {
+                        if (visitor(exe, obj, userData)) return;
+                    } __except (1) {}
+                }
+                remaining -= itemsInChunk;
+            }
+        }
+
+        // =================================================================
+        // HOOK 1: Chapter tab setup
+        // =================================================================
+        const char* kChapterTabPattern = 
+            "48 8b c4 55 41 54 41 55 41 56 41 57 48 8d a8 ? ? ? ? "
+            "48 81 ec ? ? ? ? 48 c7 45 ? fe ff ff ff 48 89 58 10 "
+            "48 89 70 18 48 89 78 20 48 8b 05 ? ? ? ? 48 33 c4 "
+            "48 89 85 ? ? ? ? 48 8b f1 45 33 e4 45 8b f4 44 89 "
+            "64 24 ? 48 8d b9 10 09 00 00";
+        
         typedef void (*ChapterTabSetupFn)(void* controller);
         ChapterTabSetupFn g_chapterTabOriginal = nullptr;
         void* g_chapterTabTarget = nullptr;
 
         // =================================================================
-        // HOOK 2: Item allocator (FUN_14088dc6c)
+        // HOOK 2: Item allocator
         // =================================================================
+        const char* kAllocatorPattern = 
+            "48 89 5c 24 08 48 89 6c 24 10 48 89 74 24 18 57 41 56 41 57 "
+            "48 83 ec ? 49 8b e9 41 bf 01 00 00 00 48 c1 ed 08 49 8b d9 "
+            "45 84 cf 4d 8b f0 48 8b fa 48 8b f1";
+
         typedef void* (*AllocItemFn)(void* pool, uint32_t size, const char* type, int flags);
         AllocItemFn g_allocOriginal = nullptr;
         void* g_allocTarget = nullptr;
@@ -69,23 +153,23 @@ namespace haloap {
         bool g_addItemHooked = false;
 
         // =================================================================
-        // HOOK 4: Menu navigation handler (FUN_140adda74)
+        // HOOK 4: Menu navigation handler
         // =================================================================
+        const char* kMenuNavPattern = 
+            "40 55 53 56 57 41 54 41 55 41 56 41 57 48 8d 6c 24 ? "
+            "48 81 ec ? ? ? ? 48 c7 45 ? fe ff ff ff 48 8b d9 "
+            "45 33 ed 41 8b fd 44 89 6d ? e8 ? ? ? ? 48 89 83 08 04 00 00";
+
         typedef void (*MenuNavFn)(void* controller);
         MenuNavFn g_menuNavOriginal = nullptr;
         void* g_menuNavTarget = nullptr;
-        
 
         // =================================================================
-        // Button collapse state (populated by InitGameModeButtonCollapse)
+        // Button collapse state
         // =================================================================
         void* g_setVisFunc = nullptr;
         void* g_menuBtnClass = nullptr;
-        void* g_cachedButtons[4] = {};
         bool g_ue4CacheReady = false;
-        bool g_buttonsCached = false;
-        int g_preNavCount = 0;
-        void* g_collapseTargets[2] = {};  // cached Quickstart and Playlists pointers
 
         // =================================================================
         // Shared state
@@ -93,128 +177,117 @@ namespace haloap {
         std::atomic<bool> g_populatingMissions{ false };
         std::atomic<int> g_missionCounter{ 0 };
         std::atomic<bool> g_nextItemLocked{ false };
-        std::atomic<uint32_t> g_collapseGeneration{ 0 };  // increments on each new navigation
+        std::atomic<uint32_t> g_collapseGeneration{ 0 };
         PipeClient* g_pipe = nullptr;
         LockCheckFn g_lockCheck = nullptr;
 
-        // ----- UE4 object cache -----
+        // ----- UE4 object cache visitor -----
+        bool CacheVisitor(uint8_t* exe, void* obj, void* /*userData*/) {
+            char name[128] = {};
+            if (!ResolveFName(exe, obj, 0x18, name, sizeof(name))) return false;
+
+            if (!g_setVisFunc && strcmp(name, "SetVisibility") == 0) {
+                void* outer = *(void**)((uint8_t*)obj + 0x20);
+                if (outer) {
+                    char outerName[64] = {};
+                    ResolveFName(exe, outer, 0x18, outerName, sizeof(outerName));
+                    if (strcmp(outerName, "Widget") == 0)
+                        g_setVisFunc = obj;
+                }
+            }
+
+            if (!g_menuBtnClass) {
+                void* cls = *(void**)((uint8_t*)obj + 0x10);
+                char cn[128] = {};
+                if (ResolveFName(exe, cls, 0x18, cn, sizeof(cn)) &&
+                    strcmp(cn, "WBP_MCCMenuButton_C") == 0) {
+                    g_menuBtnClass = cls;
+                }
+            }
+
+            return (g_setVisFunc && g_menuBtnClass); // stop when both found
+        }
+
         void CacheUE4Objects()
         {
             if (g_ue4CacheReady) return;
+            if (!g_guobjectArray || !g_fnameToString) return;
 
             uint8_t* exe = (uint8_t*)GetModuleHandleA(nullptr);
-            uint8_t* gArray = exe + UE4_GUOBJECTARRAY_OFFSET;
-            void** Objects = *(void***)(gArray + 0x10);
-            int numElements = *(int*)(gArray + 0x24);
-            int numChunks = *(int*)(gArray + 0x2C);
-            if (!Objects || numElements <= 0) return;
+            printf("[cache] Scanning UObjects...\n");
 
-            printf("[cache] Scanning %d UObjects...\n", numElements);
-
-            for (int i = 0; i < numElements; i++) {
-                int c = i / 0x10000, n = i % 0x10000;
-                if (c >= numChunks || !Objects[c]) continue;
-                void* obj = *(void**)((uint8_t*)Objects[c] + (n * 0x18));
-                if (!obj) continue;
-
-                __try {
-                    char name[128] = {};
-                    if (!ResolveFName(exe, obj, 0x18, name, sizeof(name))) continue;
-
-                    // Find SetVisibility UFunction owned by Widget
-                    if (!g_setVisFunc && strcmp(name, "SetVisibility") == 0) {
-                        void* outer = *(void**)((uint8_t*)obj + 0x20);
-                        if (outer) {
-                            char outerName[64] = {};
-                            ResolveFName(exe, outer, 0x18, outerName, sizeof(outerName));
-                            if (strcmp(outerName, "Widget") == 0)
-                                g_setVisFunc = obj;
-                        }
-                    }
-
-                    // Find WBP_MCCMenuButton_C class
-                    if (!g_menuBtnClass) {
-                        void* cls = *(void**)((uint8_t*)obj + 0x10);
-                        char cn[128] = {};
-                        if (ResolveFName(exe, cls, 0x18, cn, sizeof(cn)) &&
-                            strcmp(cn, "WBP_MCCMenuButton_C") == 0) {
-                            g_menuBtnClass = cls;
-                            }
-                    }
-                } __except (1) {}
-
-                if (g_setVisFunc && g_menuBtnClass) break;
-            }
+            ForEachUObject(exe, CacheVisitor, nullptr);
 
             g_ue4CacheReady = (g_setVisFunc && g_menuBtnClass);
             printf("[cache] SetVis=%p BtnClass=%p ready=%d\n",
                    g_setVisFunc, g_menuBtnClass, g_ue4CacheReady);
         }
-        
-        int32_t g_cachedTargetNums[2] = { -1, -1 };
 
         // ----- Collapse Quickstart/Playlists -----
-        // Change return type to bool
-bool CollapseGameModeButtons() {
-    if (!g_ue4CacheReady || !g_setVisFunc || !g_menuBtnClass) return false;
+        bool CollapseGameModeButtons() {
+            if (!g_ue4CacheReady) CacheUE4Objects();
+            if (!g_ue4CacheReady || !g_setVisFunc || !g_menuBtnClass || !g_guobjectArray) return false;
 
-    uint8_t* exe = (uint8_t*)GetModuleHandleA(nullptr);
-    uint8_t* gArray = exe + UE4_GUOBJECTARRAY_OFFSET;
-    void** Objects = *(void***)(gArray + 0x10);
-    int numElements = *(int*)(gArray + 0x24);
-    int numChunks = *(int*)(gArray + 0x2C);
-    if (!Objects || numElements <= 0) return false;
+            uint8_t* exe = (uint8_t*)GetModuleHandleA(nullptr);
+            void** Objects = *(void***)(g_guobjectArray + 0x10);
+            int numElements = *(int*)(g_guobjectArray + 0x24);
+            int numChunks = *(int*)(g_guobjectArray + 0x2C);
+            if (!Objects || numElements <= 0) return false;
 
-    int32_t classNameIndex = *(int32_t*)((uint8_t*)g_menuBtnClass + 0x18);
+            int32_t classNameIndex = *(int32_t*)((uint8_t*)g_menuBtnClass + 0x18);
 
-    typedef void (__fastcall *ProcessEventFn)(void* obj, void* func, void* parms);
-    int collapsed = 0;
-    int scanned = 0;
-    int noLabel = 0;
+            typedef void (__fastcall *ProcessEventFn)(void* obj, void* func, void* parms);
+            int collapsed = 0;
+            int scanned = 0;
+            int noLabel = 0;
 
-    for (int i = 0; i < numElements; i++) {
-        int c = i / 0x10000, n = i % 0x10000;
-        if (c >= numChunks || !Objects[c]) continue;
-        void* obj = *(void**)((uint8_t*)Objects[c] + (n * 0x18));
-        if (!obj) continue;
-        __try {
-            if (*(void**)((uint8_t*)obj + 0x10) != g_menuBtnClass) continue;
-            int32_t objNameIndex = *(int32_t*)((uint8_t*)obj + 0x18);
-            int32_t objNameNum = *(int32_t*)((uint8_t*)obj + 0x1C);
-            if (objNameIndex != classNameIndex || objNameNum <= 0) continue;
+            int remaining = numElements;
+            for (int c = 0; c < numChunks && remaining > 0; c++) {
+                if (!Objects[c]) { remaining -= 0x10000; continue; }
+                uint8_t* chunk = (uint8_t*)Objects[c];
+                int itemsInChunk = (remaining > 0x10000) ? 0x10000 : remaining;
 
-            scanned++;
-            char label[32] = {};
-            void* textBlock = *(void**)((uint8_t*)obj + 0x4B8);
-            if (!textBlock) { noLabel++; continue; }
-            void* textData = *(void**)((uint8_t*)textBlock + 0x180);
-            if (!textData) { noLabel++; continue; }
-            wchar_t* ws = *(wchar_t**)((uint8_t*)textData + 0x28);
-            if (!ws) { noLabel++; continue; }
+                for (int n = 0; n < itemsInChunk; n++) {
+                    void* obj = *(void**)(chunk + (n * 0x18));
+                    if (!obj) continue;
+                    __try {
+                        if (*(void**)((uint8_t*)obj + 0x10) != g_menuBtnClass) continue;
+                        int32_t objNameIndex = *(int32_t*)((uint8_t*)obj + 0x18);
+                        int32_t objNameNum = *(int32_t*)((uint8_t*)obj + 0x1C);
+                        if (objNameIndex != classNameIndex || objNameNum <= 0) continue;
 
-            for (int j = 0; j < 28 && ws[j] && ws[j] < 0x7F; j++)
-                label[j] = (char)ws[j];
+                        scanned++;
+                        char label[32] = {};
+                        void* textBlock = *(void**)((uint8_t*)obj + 0x4B8);
+                        if (!textBlock) { noLabel++; continue; }
+                        void* textData = *(void**)((uint8_t*)textBlock + 0x180);
+                        if (!textData) { noLabel++; continue; }
+                        wchar_t* ws = *(wchar_t**)((uint8_t*)textData + 0x28);
+                        if (!ws) { noLabel++; continue; }
 
-            if (strcmp(label, "QUICKSTART") == 0 || strcmp(label, "PLAYLISTS") == 0) {
-                uint8_t params[16] = {};
-                params[0] = 1;
-                uint64_t* vtable = *(uint64_t**)obj;
-                ProcessEventFn pe = (ProcessEventFn)vtable[0x40];
-                pe(obj, g_setVisFunc, params);
-                collapsed++;
-                printf("[collapse] Hidden '%s' (num=%d)\n", label, objNameNum);
+                        for (int j = 0; j < 28 && ws[j] && ws[j] < 0x7F; j++)
+                            label[j] = (char)ws[j];
+
+                        if (strcmp(label, "QUICKSTART") == 0 || strcmp(label, "PLAYLISTS") == 0) {
+                            uint8_t params[16] = {};
+                            params[0] = 1;
+                            uint64_t* vtable = *(uint64_t**)obj;
+                            ProcessEventFn pe = (ProcessEventFn)vtable[0x40];
+                            pe(obj, g_setVisFunc, params);
+                            collapsed++;
+                            printf("[collapse] Hidden '%s' (num=%d)\n", label, objNameNum);
+                        }
+                    } __except (1) {}
+                }
+                remaining -= itemsInChunk;
             }
-        } __except (1) {}
-    }
 
-    printf("[collapse] scanned=%d noLabel=%d collapsed=%d\n", scanned, noLabel, collapsed);
-    return collapsed > 0;
-}
+            printf("[collapse] scanned=%d noLabel=%d collapsed=%d\n", scanned, noLabel, collapsed);
+            return collapsed > 0;
+        }
 
         // ----- Deferred collapse thread -----
         static volatile LONG g_collapseRunning = 0;
-
-        // Replace the raw pointer cache with instance number tracking
 
         DWORD WINAPI CollapseThread(LPVOID param) {
             if (InterlockedCompareExchange(&g_collapseRunning, 1, 0) != 0) return 0;
@@ -233,8 +306,6 @@ bool CollapseGameModeButtons() {
 
         // ----- Menu navigation detour -----
 
-
-        // Game titles that lead to game mode screens
         static bool IsGameTitle(const char* label) {
             return (strstr(label, "HALO") != nullptr || 
                     strstr(label, "CROSS-GAME") != nullptr);
@@ -273,17 +344,10 @@ bool CollapseGameModeButtons() {
             if (g_shouldCollapse)
                 printf("[hook] Navigating to game: '%s', will collapse buttons\n", label);
 
-            // Record pre-nav element count
-            if (g_ue4CacheReady && g_shouldCollapse) {
-                uint8_t* exe = (uint8_t*)GetModuleHandleA(nullptr);
-                g_preNavCount = *(int*)(exe + UE4_GUOBJECTARRAY_OFFSET + 0x24);
-            }
-
             g_menuNavOriginal(controller);
 
-            if (g_ue4CacheReady && g_shouldCollapse)
+            if (g_shouldCollapse)
                 CreateThread(nullptr, 0, CollapseThread, (LPVOID)(uintptr_t)thisGen, 0, nullptr);
-
         }
 
         // ----- Add item detour -----
@@ -318,14 +382,11 @@ bool CollapseGameModeButtons() {
 
         // ----- Chapter tab setup detour -----
         void DetourChapterTabSetup(void* controller) {
-            // --- Screen identification ---
             int32_t screenId = 0;
             __try {
                 screenId = *(int32_t*)((uint8_t*)controller + 0x230);
             } __except(1) {}
             
-            // CE missions = 21, all other screens <= 16
-            // Halo 3 missions = 22, so threshold of 18 covers both
             bool isMissionScreen = (screenId > 18);
             printf("[hook] Chapter tab setup (screenId=%d, isMission=%d)\n", screenId, isMissionScreen);
 
@@ -366,7 +427,11 @@ bool CollapseGameModeButtons() {
     // =================================================================
 
     void InitGameModeButtonCollapse() {
-        CacheUE4Objects();
+        if (!g_fnameToString || !g_guobjectArray) {
+            ResolveUE4Addresses();
+        }
+        // Don't cache here — UObjects may not be loaded yet
+        // Cache will be attempted on first collapse trigger
     }
 
     bool InstallMissionSelectBlockHook(PipeClient* pipe, LockCheckFn lockCheck) {
@@ -381,7 +446,12 @@ bool CollapseGameModeButtons() {
         printf("[hook] (mission_select) exe base at %p\n", exe);
 
         // Hook 1: Chapter tab setup
-        g_chapterTabTarget = (void*)((uint8_t*)exe + 0x50bdc0);
+        g_chapterTabTarget = FindPatternInModule(exe, kChapterTabPattern);
+        if (!g_chapterTabTarget) {
+            printf("[hook] (mission_select) Chapter tab pattern not found\n");
+            return false;
+        }
+        printf("[hook] (mission_select) Chapter tab found at %p\n", g_chapterTabTarget);
         MH_STATUS status = MH_CreateHook(g_chapterTabTarget, (void*)DetourChapterTabSetup,
             (void**)&g_chapterTabOriginal);
         if (status != MH_OK) {
@@ -392,7 +462,12 @@ bool CollapseGameModeButtons() {
         printf("[hook] (mission_select) Chapter tab hook installed\n");
 
         // Hook 2: Allocator
-        g_allocTarget = (void*)((uint8_t*)exe + 0x88dc6c);
+        g_allocTarget = FindPatternInModule(exe, kAllocatorPattern);
+        if (!g_allocTarget) {
+            printf("[hook] (mission_select) Allocator pattern not found\n");
+            return false;
+        }
+        printf("[hook] (mission_select) Allocator found at %p\n", g_allocTarget);
         status = MH_CreateHook(g_allocTarget, (void*)DetourAllocItem, (void**)&g_allocOriginal);
         if (status == MH_OK) {
             MH_EnableHook(g_allocTarget);
@@ -402,7 +477,12 @@ bool CollapseGameModeButtons() {
         // Hook 3: Add item — installed dynamically
 
         // Hook 4: Menu navigation
-        g_menuNavTarget = (void*)((uint8_t*)exe + 0xADDA74);
+        g_menuNavTarget = FindPatternInModule(exe, kMenuNavPattern);
+        if (!g_menuNavTarget) {
+            printf("[hook] (mission_select) Menu nav pattern not found\n");
+            return false;
+        }
+        printf("[hook] (mission_select) Menu nav found at %p\n", g_menuNavTarget);
         status = MH_CreateHook(g_menuNavTarget, (void*)DetourMenuNav, (void**)&g_menuNavOriginal);
         if (status == MH_OK) {
             MH_EnableHook(g_menuNavTarget);
