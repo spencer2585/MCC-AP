@@ -5,6 +5,8 @@
 # Alpha 1.2.0
 - Skulls
 - Level Chapters
+- Fix resume loading locked levels
+- Fix cached mission select allowing locked levels
 
 #Planned
 (placement does not reflect priority or order of release)
