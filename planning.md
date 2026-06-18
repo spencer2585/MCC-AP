@@ -8,7 +8,7 @@
 - Fix resume loading locked levels
 - Fix cached mission select allowing locked levels
 
-#Planned
+# Planned
 (placement does not reflect priority or order of release)
 - add terminal checks
 - add golden moa checks
