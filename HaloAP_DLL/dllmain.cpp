@@ -15,6 +15,7 @@
 #include "hooks/shell_command.h"
 #include "hooks/load_level_solo.h"
 #include "hooks/mission_select_block.h"
+#include "hooks/chapter_title.h"
 
 #pragma comment(lib, "psapi.lib")
 
@@ -50,6 +51,7 @@ namespace
 		haloap::InstallMissionIdLookupHook(g_pipe);
 		haloap::InstallMissionLoadHook(g_pipe);
 		haloap::InstallLoadLevelSoloHook(g_pipe);
+		haloap::InstallChapterTitleHook(g_pipe);
 	}
 	
 	void UninstallHalo1Hooks()
@@ -58,6 +60,7 @@ namespace
 		haloap::UninstallMissionLoadHook();
 		haloap::UninstallMissionCompleteHook();
 		haloap::UninstallMissionIdLookupHook();
+		haloap::UninstallChapterTitleHook();
 	}
 	
 	void UninstallVtableHooks()
@@ -312,6 +315,18 @@ bool ResolveFName(uint8_t* exe, void* obj, int nameOffset, char* outBuf, int buf
 
 		HMODULE lastHalo1 = GetModuleHandleA("halo1.dll");
 		if (lastHalo1) {
+			// Temporary: find cinematic_set_title string
+			MODULEINFO mi = {};
+			GetModuleInformation(GetCurrentProcess(), lastHalo1, &mi, sizeof(mi));
+			uint8_t* base = (uint8_t*)lastHalo1;
+			size_t size = mi.SizeOfImage;
+			const char* target = "cinematic_set_title";
+			size_t targetLen = strlen(target);
+			for (size_t i = 0; i < size - targetLen; i++) {
+				if (memcmp(base + i, target, targetLen) == 0 && base[i + targetLen] == 0) {
+					printf("[search] Found '%s' at halo1.dll+0x%zX\n", target, i);
+				}
+			}
 			InstallHalo1Hooks();
 		}
 	

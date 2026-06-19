@@ -36,7 +36,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ap_bridge.h" />
-    <ClInclude Include="mission_map.h" />
+    <ClInclude Include="Data\chapter_map.h" />
+    <ClInclude Include="Data\mission_map.h" />
     <ClInclude Include="pipe_server.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

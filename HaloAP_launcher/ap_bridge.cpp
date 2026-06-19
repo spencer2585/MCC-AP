@@ -1,10 +1,12 @@
 #include "ap_bridge.h"
-#include "mission_map.h"
+#include "data/mission_map.h"
+#include "data/chapter_map.h"
 #include "shared/common.h"
 #include <iostream>
 #include <vector>
 #include <set>
 #include <sstream>
+#include <string>
 
 
 namespace haloap {
@@ -17,7 +19,7 @@ namespace haloap {
     std::unordered_map<std::string, int> MISSION_NAME_TO_INDEX = {
     {"The Pillar of Autumn", 0},
     {"Halo (CE)", 1},
-    {"Truth and Reconciliation", 2},
+    {"The Truth and Reconciliation", 2},
     {"The Silent Cartographer", 3},
     {"Assault on the Control Room", 4},
     {"343 Guilty Spark", 5},
@@ -40,6 +42,8 @@ namespace haloap {
     {"d20", 8},
     {"d40", 9},
     };
+    
+    std::string m_mission;
     
     void APBridge::SendCompletionState() {
         if (!m_sendToDll) return;
@@ -127,32 +131,69 @@ namespace haloap {
     }
 
     bool APBridge::HandleDllMessage(const std::string& message) {
-        const std::string prefix = "MISSION_COMPLETE: ";
-        if (message.rfind(prefix, 0) != 0) {
-            return false;  // not our message
-        }
+        const std::string missionCompPrefix = "MISSION_COMPLETE: ";
+        if (message.rfind(missionCompPrefix, 0) == 0) {
+            std::string missionCode = message.substr(missionCompPrefix.size());
+            const auto& map = GetMissionIdMap();
+            auto it = map.find(missionCode);
+            if (it == map.end()) {
+                std::cerr << "[ap] unknown mission code: " << missionCode << "\n";
+                return true;  // we recognized the message type, just couldn't map it
+            }
 
-        std::string missionCode = message.substr(prefix.size());
-        const auto& map = GetMissionIdMap();
-        auto it = map.find(missionCode);
-        if (it == map.end()) {
-            std::cerr << "[ap] unknown mission code: " << missionCode << "\n";
-            return true;  // we recognized the message type, just couldn't map it
-        }
+            int64_t locationId = it->second;
+            std::cout << "[ap] MISSION_COMPLETE: " << missionCode
+                << " -> location " << locationId
+                << " (" << GetMissionDisplayName(locationId) << ")\n";
 
-        int64_t locationId = it->second;
-        std::cout << "[ap] MISSION_COMPLETE: " << missionCode
-            << " -> location " << locationId
-            << " (" << GetMissionDisplayName(locationId) << ")\n";
-
-        SendLocation(locationId);
+            SendLocation(locationId);
         
-        if (MISSION_CODE_TO_INDEX[missionCode] == m_finalMission)
+            if (MISSION_CODE_TO_INDEX[missionCode] == m_finalMission)
+            {
+                m_client->StatusUpdate(APClient::ClientStatus::GOAL);
+            }
+        
+            return true;
+        }
+        const std::string missionPrefix = "MISSION_LOAD: ";
+        if (message.rfind(missionPrefix, 0) == 0)
         {
-            m_client->StatusUpdate(APClient::ClientStatus::GOAL);
+            std::string missionCode = message.substr(missionPrefix.size());
+            // Extract mission code from "path='levels\d40\d40'"
+            size_t levelsPos = missionCode.find("levels\\");
+            if (levelsPos != std::string::npos) {
+                size_t start = levelsPos + 7; // length of "levels\"
+                size_t end = missionCode.find('\\', start);
+                if (end != std::string::npos) {
+                    m_mission = missionCode.substr(start, end - start);
+                }
+            }
+            std::cout << "[launcher] Map: " << m_mission << "\n";
+            return true;
+        }
+        const std::string chapterPrefix = "CHAPTER:";
+        if (message.rfind(chapterPrefix, 0) == 0)
+        {
+            std::string chapterCode = message.substr(chapterPrefix.size());
+            if (m_mission.empty())
+            {
+                std::cerr << "[ap] didn't find mission, return to menu and restart mission\n";
+            }
+            chapterCode = m_mission+":"+chapterCode;
+            std::cout << "[ap] chapter " << chapterCode << "\n";
+            
+            auto& chapters = haloap::GetChapterMap();
+            auto chapterData = chapters.find(chapterCode);
+            if (chapterData != chapters.end()) {
+                std::cout << "[ap] Chapter: " << chapterData->second.name << "\n";
+                SendLocation(chapterData->second.locationId);
+            } else {
+                std::cout << "[ap] Unknown chapter: " << chapterCode << "\n";
+            }
         }
         
-        return true;
+        
+        return false;
     }
 
     void APBridge::SendLocation(int64_t locationId) {
