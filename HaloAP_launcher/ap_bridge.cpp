@@ -17,7 +17,7 @@ namespace haloap {
     std::unordered_map<std::string, int> MISSION_NAME_TO_INDEX = {
     {"The Pillar of Autumn", 0},
     {"Halo (CE)", 1},
-    {"Truth and Reconciliation", 2},
+    {"The Truth and Reconciliation", 2},
     {"The Silent Cartographer", 3},
     {"Assault on the Control Room", 4},
     {"343 Guilty Spark", 5},
