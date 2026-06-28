@@ -13,4 +13,5 @@ namespace haloap {
     bool InstallShellCommandHook(PipeClient* pipe);
     void UninstallShellCommandHook();
     extern std::atomic<bool> g_quitAfterComplete;
+    extern std::atomic<bool> g_quitLockedMission;
 }

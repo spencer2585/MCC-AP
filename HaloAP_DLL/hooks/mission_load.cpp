@@ -1,10 +1,13 @@
 #include "mission_load.h"
 #include "../minhook/MinHook.h"
 #include "../pattern_scan.h"
+#include "shell_command.h"
 #include "shared/common.h"
 #include <cstdio>
 #include <intrin.h>
 #include <psapi.h>
+
+#include "../item_handler.h"
 
 #pragma comment(lib, "psapi.lib")
 
@@ -20,6 +23,33 @@ namespace haloap {
         BeginMissionLoadFn g_originalBeginMissionLoad = nullptr;
         void* g_hookTarget = nullptr;
         PipeClient* g_pipe = nullptr;
+        
+        int MissionCodeToIndex(const char* code) {
+            struct { const char* code; int index; } mapping[] = {
+                { "a10", 0 }, { "a30", 1 }, { "a50", 2 },
+                { "b30", 3 }, { "b40", 4 }, { "c10", 5 },
+                { "c20", 6 }, { "c40", 7 }, { "d20", 8 },
+                { "d40", 9 },
+            };
+            for (auto& m : mapping) {
+                if (strcmp(code, m.code) == 0) return m.index;
+            }
+            return -1;
+        }
+ 
+        // Extract mission code from path like "levels\a10\a10"
+        int GetMissionIndexFromPath(const char* path) {
+            if (!path) return -1;
+            const char* levelsPrefix = "levels\\";
+            const char* pos = strstr(path, levelsPrefix);
+            if (!pos) return -1;
+            pos += strlen(levelsPrefix);
+            char code[16] = {};
+            for (int i = 0; i < 15 && pos[i] && pos[i] != '\\'; i++) {
+                code[i] = pos[i];
+            }
+            return MissionCodeToIndex(code);
+        }
 
         // Identify the module containing an address. Returns module name and offset.
         // If not found, returns ("?", 0).
@@ -70,6 +100,22 @@ namespace haloap {
                 g_pipe->SendAsync(buf);
             }
             
+            int missionIdx = GetMissionIndexFromPath(path);
+            bool isLocked = (missionIdx >= 0 && !GetItemHandler().isMissionAllowed(missionIdx));
+            
+            if (g_originalBeginMissionLoad)
+            {
+                g_originalBeginMissionLoad(p1, p2, path, p4, p5);
+            }
+            
+            // ALWAYS call original.
+            if (isLocked)
+            {
+                printf("[hook] Loaded locked mission %d, flagging quit to menu\n", missionIdx);
+                g_quitLockedMission.store(true);
+            }
+            
+            
             // Log each captured stack frame.
             //for (USHORT i = 0; i < framesCaptured; i++) {
             //    ModuleInfo info = IdentifyAddress(stackFrames[i]);
@@ -86,11 +132,6 @@ namespace haloap {
             //        g_pipe->SendAsync(pipeMsg);
             //    }
             //}
-
-            // ALWAYS call original.
-            if (g_originalBeginMissionLoad) {
-                g_originalBeginMissionLoad(p1, p2, path, p4, p5);
-            }
         }
     }
 

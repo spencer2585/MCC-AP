@@ -10,6 +10,7 @@
 namespace haloap {
 
     std::atomic<bool> g_quitAfterComplete{false};
+    std::atomic<bool> g_quitLockedMission{false};
     
     namespace {
         // Vtable slot 3 signature: FUN_180093ce0
@@ -47,6 +48,18 @@ namespace haloap {
                     g_original(engineObj, 0x1, nullptr);  // resume
                 }
                 return;  // Don't process the original command (which was "load next mission")
+            }
+            
+            if (g_quitLockedMission.load())
+            {
+                g_quitLockedMission.store(false);
+                printf("[hook] SHELL_CMD: intercepting — sending quit sequence (locked mission)\n");
+                if (g_original) {
+                    g_original(engineObj, 0x0, nullptr);
+                    g_original(engineObj, 0xD, nullptr);
+                    g_original(engineObj, 0x1, nullptr);
+                }
+                return;
             }
 
             // Normal processing

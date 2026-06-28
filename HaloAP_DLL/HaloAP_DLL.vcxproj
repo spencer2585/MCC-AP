@@ -166,6 +166,7 @@
     <ClInclude Include="hooks\mission_select_block.h" />
     <ClInclude Include="hooks\shell_command.h" />
     <ClInclude Include="hooks\shell_level_load.h" />
+    <ClInclude Include="hooks\skull_hook.h" />
     <ClInclude Include="item_handler.h" />
     <ClInclude Include="minhook\MinHook.h" />
     <ClInclude Include="minhook\src\buffer.h" />
@@ -188,6 +189,7 @@
     <ClCompile Include="hooks\mission_select_block.cpp" />
     <ClCompile Include="hooks\shell_command.cpp" />
     <ClCompile Include="hooks\shell_level_load.cpp" />
+    <ClCompile Include="hooks\skull_hook.cpp" />
     <ClCompile Include="item_handler.cpp" />
     <ClCompile Include="minhook\src\buffer.c" />
     <ClCompile Include="minhook\src\hde\hde32.c" />

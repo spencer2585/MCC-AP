@@ -49,7 +49,7 @@ namespace haloap {
             { "c20:0", { 107011, "The Library" } },
             { "c20:1", { 107013, "But I Don't Want to Ride the Elevator!" } },
             { "c20:2", { 107014, "Fourth Floor: Tools, Guns, Keys to Super Weapons" } },
-            { "c20:3", { 107012, "Wait, it Gets Worse" } },
+            { "c20:5", { 107012, "Wait, it Gets Worse" } },
             
             //c40 - Two Betrayals
             { "c40:0", { 108011, "The Gun Pointed at the Head of the Universe" } },
