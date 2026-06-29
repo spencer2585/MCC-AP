@@ -73,6 +73,11 @@ namespace haloap {
     
     void APBridge::ReplayBufferedItems() {
         if (!m_sendToDll) return;
+        if (m_skullsanityTier >= 0)
+        {
+            m_sendToDll("SKULLSANITY: "+ std::to_string(m_skullsanityTier));
+        }
+        
         std::lock_guard<std::mutex> lock(m_itemBufferMutex);
         std::cout << "[ap] replaying " << m_itemBuffer.size() << " buffered items to DLL\n";
         for (int64_t itemId : m_itemBuffer) {
@@ -190,6 +195,16 @@ namespace haloap {
             } else {
                 std::cout << "[ap] Unknown chapter: " << chapterCode << "\n";
             }
+            return true;
+        }
+        
+        const std::string locationPrefix = "LOCATION_CHECKED: ";
+        if (message.rfind(locationPrefix, 0) == 0)
+        {
+            int64_t locationId = std::stoll(message.substr(locationPrefix.size()));
+            std::cout << "[ap] skull location checked: " << locationId << "\n";
+            SendLocation(locationId);
+            return true;
         }
         
         
@@ -263,7 +278,16 @@ namespace haloap {
             }
         }
         
-        m_finalMission = MISSION_NAME_TO_INDEX[slotData.at("final_mission").get<std::string>()];
+        if (slotData.contains("final_mission"))
+        {
+            m_finalMission = MISSION_NAME_TO_INDEX[slotData.at("final_mission").get<std::string>()];
+        }
+        
+        if (slotData.contains("skullsanity"))
+        {
+            m_skullsanityTier = slotData["skullsanity"].get<int>();
+        }
+        
         
         SendCompletionState();
     }

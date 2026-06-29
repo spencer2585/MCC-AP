@@ -1,5 +1,6 @@
 #include "pipe_client.h"
 #include "item_handler.h"
+#include "hooks/skull_hook.h"
 #include "shared/common.h"
 #include <cstdio>
 #include <vector>
@@ -7,13 +8,16 @@
 
 PipeClient::PipeClient() = default;
 
-PipeClient::~PipeClient() {
+PipeClient::~PipeClient()
+{
     Stop();
 }
 
-bool PipeClient::Connect() {
+bool PipeClient::Connect()
+{
     m_shutdownEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-    if (!m_shutdownEvent) {
+    if (!m_shutdownEvent)
+    {
         printf("[pipe] CreateEvent failed: %lu\n", GetLastError());
         return false;
     }
@@ -24,11 +28,12 @@ bool PipeClient::Connect() {
         0,
         nullptr,
         OPEN_EXISTING,
-        FILE_FLAG_OVERLAPPED,     // <-- async
+        FILE_FLAG_OVERLAPPED, // <-- async
         nullptr
     );
 
-    if (m_pipe == INVALID_HANDLE_VALUE) {
+    if (m_pipe == INVALID_HANDLE_VALUE)
+    {
         printf("[pipe] CreateFile failed: %lu\n", GetLastError());
         CloseHandle(m_shutdownEvent);
         m_shutdownEvent = nullptr;
@@ -41,44 +46,54 @@ bool PipeClient::Connect() {
     return true;
 }
 
-void PipeClient::Stop() {
-    if (m_shutdown.exchange(true)) {
+void PipeClient::Stop()
+{
+    if (m_shutdown.exchange(true))
+    {
         return;
     }
     m_connected.store(false);
 
-    if (m_shutdownEvent) {
+    if (m_shutdownEvent)
+    {
         SetEvent(m_shutdownEvent);
     }
     m_sendQueueCv.notify_all();
 
-    if (m_thread.joinable()) {
+    if (m_thread.joinable())
+    {
         m_thread.join();
     }
 
-    if (m_senderThread.joinable()) {
+    if (m_senderThread.joinable())
+    {
         m_senderThread.join();
     }
 
-    if (m_pipe != INVALID_HANDLE_VALUE) {
+    if (m_pipe != INVALID_HANDLE_VALUE)
+    {
         CloseHandle(m_pipe);
         m_pipe = INVALID_HANDLE_VALUE;
     }
 
-    if (m_shutdownEvent) {
+    if (m_shutdownEvent)
+    {
         CloseHandle(m_shutdownEvent);
         m_shutdownEvent = nullptr;
     }
 }
 
-bool PipeClient::Send(const std::string& message) {
-    if (!m_connected.load() || m_pipe == INVALID_HANDLE_VALUE) {
+bool PipeClient::Send(const std::string& message)
+{
+    if (!m_connected.load() || m_pipe == INVALID_HANDLE_VALUE)
+    {
         return false;
     }
 
     uint32_t length = static_cast<uint32_t>(message.size());
 
-    auto writeExact = [this](const void* data, DWORD size) -> bool {
+    auto writeExact = [this](const void* data, DWORD size) -> bool
+    {
         HANDLE ev = CreateEventW(nullptr, TRUE, FALSE, nullptr);
         if (!ev) return false;
 
@@ -89,40 +104,45 @@ bool PipeClient::Send(const std::string& message) {
         BOOL ok = WriteFile(m_pipe, data, size, &written, &ov);
         DWORD err = GetLastError();
 
-        if (!ok && err != ERROR_IO_PENDING) {
+        if (!ok && err != ERROR_IO_PENDING)
+        {
             CloseHandle(ev);
             return false;
         }
 
-        HANDLE waits[] = { ov.hEvent, m_shutdownEvent };
+        HANDLE waits[] = {ov.hEvent, m_shutdownEvent};
         DWORD result = WaitForMultipleObjects(2, waits, FALSE, INFINITE);
 
-        if (result == WAIT_OBJECT_0 + 1) {
+        if (result == WAIT_OBJECT_0 + 1)
+        {
             CancelIoEx(m_pipe, &ov);
             WaitForSingleObject(ov.hEvent, INFINITE);
             CloseHandle(ev);
             return false;
         }
 
-        if (!GetOverlappedResult(m_pipe, &ov, &written, FALSE) || written != size) {
+        if (!GetOverlappedResult(m_pipe, &ov, &written, FALSE) || written != size)
+        {
             CloseHandle(ev);
             return false;
         }
 
         CloseHandle(ev);
         return true;
-        };
+    };
 
     if (!writeExact(&length, sizeof(length))) return false;
     if (!writeExact(message.data(), length)) return false;
     return true;
 }
 
-bool PipeClient::ReadExact(void* buffer, DWORD size) {
+bool PipeClient::ReadExact(void* buffer, DWORD size)
+{
     char* p = static_cast<char*>(buffer);
     DWORD totalRead = 0;
 
-    while (totalRead < size) {
+    while (totalRead < size)
+    {
         HANDLE ev = CreateEventW(nullptr, TRUE, FALSE, nullptr);
         if (!ev) return false;
 
@@ -133,22 +153,25 @@ bool PipeClient::ReadExact(void* buffer, DWORD size) {
         BOOL ok = ReadFile(m_pipe, p + totalRead, size - totalRead, &chunk, &ov);
         DWORD err = GetLastError();
 
-        if (!ok && err != ERROR_IO_PENDING) {
+        if (!ok && err != ERROR_IO_PENDING)
+        {
             CloseHandle(ev);
             return false;
         }
 
-        HANDLE waits[] = { ov.hEvent, m_shutdownEvent };
+        HANDLE waits[] = {ov.hEvent, m_shutdownEvent};
         DWORD result = WaitForMultipleObjects(2, waits, FALSE, INFINITE);
 
-        if (result == WAIT_OBJECT_0 + 1) {
+        if (result == WAIT_OBJECT_0 + 1)
+        {
             CancelIoEx(m_pipe, &ov);
             WaitForSingleObject(ov.hEvent, INFINITE);
             CloseHandle(ev);
             return false;
         }
 
-        if (!GetOverlappedResult(m_pipe, &ov, &chunk, FALSE) || chunk == 0) {
+        if (!GetOverlappedResult(m_pipe, &ov, &chunk, FALSE) || chunk == 0)
+        {
             CloseHandle(ev);
             return false;
         }
@@ -160,24 +183,31 @@ bool PipeClient::ReadExact(void* buffer, DWORD size) {
     return true;
 }
 
-void PipeClient::ReaderThreadMain() {
-    while (!m_shutdown.load()) {
+void PipeClient::ReaderThreadMain()
+{
+    while (!m_shutdown.load())
+    {
         uint32_t length = 0;
-        if (!ReadExact(&length, sizeof(length))) {
-            if (!m_shutdown.load()) {
+        if (!ReadExact(&length, sizeof(length)))
+        {
+            if (!m_shutdown.load())
+            {
                 printf("[pipe] length read failed\n");
             }
             break;
         }
 
-        if (length == 0 || length > haloap::kMaxMessageSize) {
+        if (length == 0 || length > haloap::kMaxMessageSize)
+        {
             printf("[pipe] bad message length: %u\n", length);
             break;
         }
 
         std::vector<char> body(length);
-        if (!ReadExact(body.data(), length)) {
-            if (!m_shutdown.load()) {
+        if (!ReadExact(body.data(), length))
+        {
+            if (!m_shutdown.load())
+            {
                 printf("[pipe] body read failed\n");
             }
             break;
@@ -190,24 +220,30 @@ void PipeClient::ReaderThreadMain() {
     m_connected.store(false);
 }
 
-void PipeClient::HandleMessage(const std::string& message) {
+void PipeClient::HandleMessage(const std::string& message)
+{
     const std::string itemPrefix = "ITEM_RECIVED: ";
     const std::string completedPrefix = "COMPLETED:";
     const std::string finalMissionPrefix = "FINAL_MISSION:";
+    const std::string skullsanityPrefix = "SKULLSANITY: ";
 
-    if (message.rfind(itemPrefix, 0) == 0) {
+    if (message.rfind(itemPrefix, 0) == 0)
+    {
         int itemID = std::atoi(message.c_str() + itemPrefix.size());
         printf("[pipe] Item received: %d\n", itemID);
         haloap::GetItemHandler().addItem(itemID);
         return;
     }
 
-    if (message.rfind(completedPrefix, 0) == 0) {
+    if (message.rfind(completedPrefix, 0) == 0)
+    {
         bool completed[9] = {};
         std::string data = message.substr(completedPrefix.size());
-        if (!data.empty()) {
+        if (!data.empty())
+        {
             size_t pos = 0;
-            while (pos < data.size()) {
+            while (pos < data.size())
+            {
                 size_t comma = data.find(',', pos);
                 if (comma == std::string::npos) comma = data.size();
                 int idx = std::atoi(data.substr(pos, comma - pos).c_str());
@@ -221,7 +257,7 @@ void PipeClient::HandleMessage(const std::string& message) {
         printf("[pipe] Mission completions updated: %d/9\n", count);
         return;
     }
-    
+
     if (message.rfind(finalMissionPrefix, 0) == 0)
     {
         int idx = std::atoi(message.c_str() + finalMissionPrefix.size());
@@ -230,10 +266,19 @@ void PipeClient::HandleMessage(const std::string& message) {
         return;
     }
 
+    if (message.rfind(skullsanityPrefix, 0) == 0)
+    {
+        int tier = std::atoi(message.c_str() + skullsanityPrefix.size());
+        printf("[pipe] Skullsanity tier: %d\n", tier);
+        haloap::SetSkullsanityTier(tier);
+        return;
+    }
+
     printf("[pipe <- injector] %s\n", message.c_str());
 }
 
-void PipeClient::SendAsync(const std::string& message) {
+void PipeClient::SendAsync(const std::string& message)
+{
     if (m_shutdown.load()) return;
     {
         std::lock_guard<std::mutex> lock(m_sendQueueMutex);
@@ -242,14 +287,17 @@ void PipeClient::SendAsync(const std::string& message) {
     m_sendQueueCv.notify_one();
 }
 
-void PipeClient::SenderThreadMain() {
-    while (!m_shutdown.load()) {
+void PipeClient::SenderThreadMain()
+{
+    while (!m_shutdown.load())
+    {
         std::string msg;
         {
             std::unique_lock<std::mutex> lock(m_sendQueueMutex);
-            m_sendQueueCv.wait(lock, [this]() {
+            m_sendQueueCv.wait(lock, [this]()
+            {
                 return !m_sendQueue.empty() || m_shutdown.load();
-                });
+            });
             if (m_shutdown.load()) break;
             msg = std::move(m_sendQueue.front());
             m_sendQueue.pop_front();
