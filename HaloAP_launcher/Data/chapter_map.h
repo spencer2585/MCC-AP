@@ -58,9 +58,9 @@ namespace haloap {
             { "c40:3", { 108014, "Final Run" } },
             
             //d20 - Keyes
-            { "c40:0", { 109011, "Under New Management" } },
-            { "c40:1", { 109012, "Upstairs, Downstairs" } },
-            { "c40:2", { 109013, "The Captain" } },
+            { "d20:0", { 109011, "Under New Management" } },
+            { "d20:1", { 109012, "Upstairs, Downstairs" } },
+            { "d20:2", { 109013, "The Captain" } },
             
             //d40 - The Maw
             {"d40:0", {110011, "...And the Horse You Rode In On"} },

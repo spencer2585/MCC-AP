@@ -2,6 +2,7 @@
 #include "../minhook/MinHook.h"
 #include "../pattern_scan.h"
 #include "shell_command.h"
+#include "skull_hook.h"
 #include "shared/common.h"
 #include <cstdio>
 #include <intrin.h>
@@ -83,6 +84,7 @@ namespace haloap {
 
         void DetourBeginMissionLoad(void* p1, void* p2, const char* path,
             unsigned int p4, char p5) {
+            haloap::SetInMission(true);
             // Walk up the stack. Skip 1 frame (this detour function itself).
             // Capture up to 10 frames after that.
             //constexpr ULONG kFramesToSkip = 1;

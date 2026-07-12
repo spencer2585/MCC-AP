@@ -401,7 +401,6 @@ namespace
             //		printf("[search] Found '%s' at halo1.dll+0x%zX\n", target, i);
             //	}
             //}
-            haloap::SetInMission(true);
             InstallHalo1Hooks();
         }
 
@@ -425,7 +424,6 @@ namespace
                 {
                     printf("[monitor] halo1.dll reloaded at %p (was %p). Reinstalling hooks...\n",
                            currentHalo1, lastHalo1);
-                    haloap::SetInMission(true);
                     UninstallHalo1Hooks();
                     UninstallVtableHooks();
                     InstallHalo1Hooks();

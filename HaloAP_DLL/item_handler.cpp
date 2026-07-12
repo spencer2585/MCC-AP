@@ -19,7 +19,7 @@ namespace haloap {
         constexpr int CE_OFFSET = 100000;
         constexpr int CE_SKULL_OFFSET = 90000;
         constexpr int MISSION_COUNT = 10;
-        constexpr int SKULL_DISABLER_COUNT = 21;
+        constexpr int SKULL_DISABLER_COUNT = 23;
     }
     
     bool m_missionCompleted[10] = {};
@@ -39,7 +39,8 @@ namespace haloap {
         if (disablerIdx >= 0)
         {
             printf("[items] Skull disabler idx %d received (AP item %d)\n", disablerIdx, itemID);
-            haloap::DisableSkull(disablerIdx);
+            haloap::UnlockSkull(disablerIdx);
+            printf("[[items] UnlockSkull returned\n");
             return;
         }
         

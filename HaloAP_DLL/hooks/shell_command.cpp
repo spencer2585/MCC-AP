@@ -1,6 +1,7 @@
 #include "shell_command.h"
 #include "../minhook/MinHook.h"
 #include "shared/common.h"
+#include "skull_hook.h"
 #include <cstdio>
 #include <intrin.h>
 #include <psapi.h>
@@ -46,6 +47,7 @@ namespace haloap {
                     g_original(engineObj, 0x0, nullptr);  // pause
                     g_original(engineObj, 0xD, nullptr);  // teardown
                     g_original(engineObj, 0x1, nullptr);  // resume
+                    haloap::SetInMission(false);
                 }
                 return;  // Don't process the original command (which was "load next mission")
             }

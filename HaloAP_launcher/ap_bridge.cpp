@@ -259,7 +259,7 @@ namespace haloap {
         // ConnectSlot params: slot name, password, items-handling flags, tags, version
         // Items handling 0b111 = all items (local, starting inventory, world items).
         std::list<std::string> tags;  // no special tags for now
-        m_client->ConnectSlot(m_slot, m_password, 0b111, tags, { 0, 5, 0 });
+        m_client->ConnectSlot(m_slot, m_password, 0b111, tags, { 1, 2, 0 });
     }
 
     void APBridge::OnSlotConnected(const nlohmann::json& slotData) {

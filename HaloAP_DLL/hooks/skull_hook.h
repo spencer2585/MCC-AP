@@ -19,10 +19,12 @@ namespace haloap {
 
     // Disable a skull disabler item by its 0-based index in CE_SKULL_DISABLERS
     // (items.py). Called from item_handler when a Disable Skull item is received.
-    void DisableSkull(int disablerIdx);
+    void UnlockSkull(int disablerIdx);
 
     // Track whether the player is currently inside a mission. ApplyForcedSkulls
     // only runs when NOT in a mission (bitmask pointer chain is lobby-only).
     void SetInMission(bool inMission);
+    
+    uint64_t GetUnlockedMask();
 
 }  // namespace haloap
