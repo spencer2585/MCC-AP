@@ -75,7 +75,7 @@ int main() {
 	if (!gameRoot.empty()) {
 		std::cout << "Using saved game directory: " << gameRoot << "\n";
 	} else {
-		gameRoot = PromptLine("MCC game root directory (Steam install folder)");
+		gameRoot = PromptLine("MCC game root directory");
 		while (gameRoot.empty()) {
 			std::cout << "Game directory is required.\n";
 			gameRoot = PromptLine("MCC game root directory");
