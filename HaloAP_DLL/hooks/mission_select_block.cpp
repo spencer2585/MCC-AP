@@ -213,8 +213,31 @@ namespace haloap
         // Uses skull ID at widget+0x1C8 to compute bitmask bit (1ULL << id).
         // Locked skulls get native lock icon + disabled state.
         // =================================================================
+        // Add to skull UI state
+        void* g_skullWidgetVtable = nullptr;
+
         void DetourSkullSetEnabled(void* widget, int enabled)
         {
+            // Fast path: skip non-skull widgets by vtable check
+            if (g_skullWidgetVtable)
+            {
+                __try
+                {
+                    if (*(void**)widget != g_skullWidgetVtable)
+                    {
+                        if (g_origSkullSetEnabled)
+                            g_origSkullSetEnabled(widget, enabled);
+                        return;
+                    }
+                }
+                __except (1)
+                {
+                    if (g_origSkullSetEnabled)
+                        g_origSkullSetEnabled(widget, enabled);
+                    return;
+                }
+            }
+
             if (g_inSkullSetEnabled)
             {
                 if (g_origSkullSetEnabled)
@@ -228,7 +251,6 @@ namespace haloap
                 uint8_t* w = (uint8_t*)widget;
                 int skullId = *(int*)(w + 0x1C8);
 
-                // Valid CE skull IDs are 0-37
                 if (skullId >= 0 && skullId <= 37)
                 {
                     uint64_t bit = 1ULL << skullId;
@@ -557,6 +579,14 @@ namespace haloap
             {
                 g_trackingSkulls = false;
                 printf("[skull-ui] %d skull widgets captured\n", g_skullWidgetCount);
+    
+                // Cache vtable for fast filtering in the detour
+                if (g_skullWidgetCount > 0 && !g_skullWidgetVtable)
+                {
+                    __try { g_skullWidgetVtable = *(void**)g_skullWidgets[0]; }
+                    __except (1) {}
+                    printf("[skull-ui] Skull vtable cached: %p\n", g_skullWidgetVtable);
+                }
             }
 
             printf("[hook] Chapter tab setup complete, %d items processed\n",
