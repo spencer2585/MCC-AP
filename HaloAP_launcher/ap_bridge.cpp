@@ -1,10 +1,12 @@
 #include "ap_bridge.h"
-#include "mission_map.h"
+#include "data/mission_map.h"
+#include "data/chapter_map.h"
 #include "shared/common.h"
 #include <iostream>
 #include <vector>
 #include <set>
 #include <sstream>
+#include <string>
 
 
 namespace haloap {
@@ -41,6 +43,8 @@ namespace haloap {
     {"d40", 9},
     };
     
+    std::string m_mission;
+    
     void APBridge::SendCompletionState() {
         if (!m_sendToDll) return;
         std::lock_guard<std::mutex> lock(m_checkedMutex);
@@ -69,6 +73,11 @@ namespace haloap {
     
     void APBridge::ReplayBufferedItems() {
         if (!m_sendToDll) return;
+        if (m_skullsanityTier >= 0)
+        {
+            m_sendToDll("SKULLSANITY: "+ std::to_string(m_skullsanityTier));
+        }
+        
         std::lock_guard<std::mutex> lock(m_itemBufferMutex);
         std::cout << "[ap] replaying " << m_itemBuffer.size() << " buffered items to DLL\n";
         for (int64_t itemId : m_itemBuffer) {
@@ -127,32 +136,79 @@ namespace haloap {
     }
 
     bool APBridge::HandleDllMessage(const std::string& message) {
-        const std::string prefix = "MISSION_COMPLETE: ";
-        if (message.rfind(prefix, 0) != 0) {
-            return false;  // not our message
-        }
+        const std::string missionCompPrefix = "MISSION_COMPLETE: ";
+        if (message.rfind(missionCompPrefix, 0) == 0) {
+            std::string missionCode = message.substr(missionCompPrefix.size());
+            const auto& map = GetMissionIdMap();
+            auto it = map.find(missionCode);
+            if (it == map.end()) {
+                std::cerr << "[ap] unknown mission code: " << missionCode << "\n";
+                return true;  // we recognized the message type, just couldn't map it
+            }
 
-        std::string missionCode = message.substr(prefix.size());
-        const auto& map = GetMissionIdMap();
-        auto it = map.find(missionCode);
-        if (it == map.end()) {
-            std::cerr << "[ap] unknown mission code: " << missionCode << "\n";
-            return true;  // we recognized the message type, just couldn't map it
-        }
+            int64_t locationId = it->second;
+            std::cout << "[ap] MISSION_COMPLETE: " << missionCode
+                << " -> location " << locationId
+                << " (" << GetMissionDisplayName(locationId) << ")\n";
 
-        int64_t locationId = it->second;
-        std::cout << "[ap] MISSION_COMPLETE: " << missionCode
-            << " -> location " << locationId
-            << " (" << GetMissionDisplayName(locationId) << ")\n";
-
-        SendLocation(locationId);
+            SendLocation(locationId);
         
-        if (MISSION_CODE_TO_INDEX[missionCode] == m_finalMission)
+            if (MISSION_CODE_TO_INDEX[missionCode] == m_finalMission)
+            {
+                m_client->StatusUpdate(APClient::ClientStatus::GOAL);
+            }
+        
+            return true;
+        }
+        const std::string missionPrefix = "MISSION_LOAD: ";
+        if (message.rfind(missionPrefix, 0) == 0)
         {
-            m_client->StatusUpdate(APClient::ClientStatus::GOAL);
+            std::string missionCode = message.substr(missionPrefix.size());
+            // Extract mission code from "path='levels\d40\d40'"
+            size_t levelsPos = missionCode.find("levels\\");
+            if (levelsPos != std::string::npos) {
+                size_t start = levelsPos + 7; // length of "levels\"
+                size_t end = missionCode.find('\\', start);
+                if (end != std::string::npos) {
+                    m_mission = missionCode.substr(start, end - start);
+                }
+            }
+            std::cout << "[launcher] Map: " << m_mission << "\n";
+            return true;
+        }
+        const std::string chapterPrefix = "CHAPTER:";
+        if (message.rfind(chapterPrefix, 0) == 0)
+        {
+            std::string chapterCode = message.substr(chapterPrefix.size());
+            if (m_mission.empty())
+            {
+                std::cerr << "[ap] didn't find mission, return to menu and restart mission\n";
+            }
+            chapterCode = m_mission+":"+chapterCode;
+            std::cout << "[ap] chapter " << chapterCode << "\n";
+            
+            auto& chapters = haloap::GetChapterMap();
+            auto chapterData = chapters.find(chapterCode);
+            if (chapterData != chapters.end()) {
+                std::cout << "[ap] Chapter: " << chapterData->second.name << "\n";
+                SendLocation(chapterData->second.locationId);
+            } else {
+                std::cout << "[ap] Unknown chapter: " << chapterCode << "\n";
+            }
+            return true;
         }
         
-        return true;
+        const std::string locationPrefix = "LOCATION_CHECKED: ";
+        if (message.rfind(locationPrefix, 0) == 0)
+        {
+            int64_t locationId = std::stoll(message.substr(locationPrefix.size()));
+            std::cout << "[ap] skull location checked: " << locationId << "\n";
+            SendLocation(locationId);
+            return true;
+        }
+        
+        
+        return false;
     }
 
     void APBridge::SendLocation(int64_t locationId) {
@@ -203,7 +259,7 @@ namespace haloap {
         // ConnectSlot params: slot name, password, items-handling flags, tags, version
         // Items handling 0b111 = all items (local, starting inventory, world items).
         std::list<std::string> tags;  // no special tags for now
-        m_client->ConnectSlot(m_slot, m_password, 0b111, tags, { 0, 5, 0 });
+        m_client->ConnectSlot(m_slot, m_password, 0b111, tags, { 1, 2, 0 });
     }
 
     void APBridge::OnSlotConnected(const nlohmann::json& slotData) {
@@ -222,7 +278,16 @@ namespace haloap {
             }
         }
         
-        m_finalMission = MISSION_NAME_TO_INDEX[slotData.at("final_mission").get<std::string>()];
+        if (slotData.contains("final_mission"))
+        {
+            m_finalMission = MISSION_NAME_TO_INDEX[slotData.at("final_mission").get<std::string>()];
+        }
+        
+        if (slotData.contains("skullsanity"))
+        {
+            m_skullsanityTier = slotData["skullsanity"].get<int>();
+        }
+        
         
         SendCompletionState();
     }
