@@ -1,7 +1,3 @@
-# Alpha 1.1.2
-- random final mission
-- Microsoft store?
-
 # Alpha 1.2.0
 - Skulls
 - Level Chapters
