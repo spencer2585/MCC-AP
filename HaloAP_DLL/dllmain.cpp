@@ -461,6 +461,29 @@ namespace
                     vtableHooksInstalled = false;
                     InstallHalo1Hooks();
                     lastEngineObj = currentEngineObj;
+                    
+                    if (haloap::InstallShellLevelLoadHook(g_pipe))
+                    {
+                        haloap::InstallShellCommandHook(g_pipe);
+                        vtableHooksInstalled = true;
+                        lastEngineObj = haloap::GetEngineObject();
+                    }
+                    
+                    // If immediate install failed, retry quickly
+                    if (!vtableHooksInstalled && currentHalo1)
+                    {
+                        for (int retry = 0; retry < 10; retry++)
+                        {
+                            Sleep(500);
+                            if (haloap::InstallShellLevelLoadHook(g_pipe))
+                            {
+                                haloap::InstallShellCommandHook(g_pipe);
+                                vtableHooksInstalled = true;
+                                lastEngineObj = haloap::GetEngineObject();
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 
