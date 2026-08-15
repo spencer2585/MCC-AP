@@ -20,4 +20,4 @@ For now only Halo CE. eventual plans are to cover all 6 games included in MCC
 Ping me in the MCC thread in discord. That is where I can most easily track issues
 
 # Known Issues
-sometimes missions and buttons that are supposed to be removed will stay
+Chapter transitions that happen in skippable cutscenes will not send their location if the cutscene is skipped
