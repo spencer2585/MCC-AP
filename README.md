@@ -1,23 +1,10 @@
-# Setup Guide
+# AP Halo: the Master Chief Collection
+### An Archipelago randomizer implementation for Halo: The Master Chief Collection
+The newest release can always be found [here](https://github.com/spencer2585/MCC-AP/releases/latest)
 
-1. Download the zip file from the github and extract to a location of your choice.
-2. Generate a game
-3. Run HaloAP_Launcher.exe
-4. Enter your room info, MCC will start automatically
-6. Play the game
-
-# Questions
-## Whats randomized
-Currently only mission access and beating levels are included. More will be added later
-
-## Whats the goal
-the goal is currently to beat the final mission of Halo CE: The Maw, this requires you to beat all other missions in Halo CE
-
-## What games are currently included
-For now only Halo CE. eventual plans are to cover all 6 games included in MCC
-
-## I found a bug, where can I report it
-Ping me in the MCC thread in discord. That is where I can most easily track issues
-
-# Known Issues
-Chapter transitions that happen in skippable cutscenes will not send their location if the cutscene is skipped
+## Documentation
+[Setup Guide](docs/setup.md)<br/>
+[Current Features](docs/randomization.md)<br/>
+[Known Bugs](docs/bugs.md)<br/>
+[Planned Features](docs/planning.md)<br/>
+[AI Usage Disclosure](docs/ai_disclosure.md)
