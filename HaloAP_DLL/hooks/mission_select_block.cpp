@@ -258,10 +258,12 @@ namespace haloap
                     
                     uint64_t managedMask = GetForcedMask();
                     if (!(managedMask & bit))
+                    {
                         if (g_origSkullSetEnabled)
                             g_origSkullSetEnabled(widget, enabled);
                         g_inSkullSetEnabled = false;
                         return;
+                    }
 
                     if (!(unlockedMask & bit))
                     {

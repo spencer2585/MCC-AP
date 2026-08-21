@@ -322,14 +322,21 @@ namespace haloap
         // -----------------------------------------------------------------
         // Detour
         // -----------------------------------------------------------------
-        void DetourOnSkullClaimed(void* a, int skull_id, void* c, void* d, void* e)
+        static int ReadSkullIdFromParam(void* c)
         {
-            int actualSkullId = -1;
             __try
             {
-                actualSkullId = *(int*)((uint8_t*)c + 0x10);
+                return *(int*)((uint8_t*)c + 0x10);
             }
-            __except (1) {}
+            __except (1)
+            {
+                return -1;
+            }
+        }
+
+        void DetourOnSkullClaimed(void* a, int skull_id, void* c, void* d, void* e)
+        {
+            int actualSkullId = ReadSkullIdFromParam(c);
 
             printf("[skull] OnSkullClaimed: skull_id=%d\n", actualSkullId);
 
@@ -338,7 +345,8 @@ namespace haloap
                 int locationId = kSkullIdToLocationId[actualSkullId];
                 if (locationId != 0 && g_pipe && g_pipe->IsConnected())
                 {
-                    std::string msg = "LOCATION_CHECKED: " + std::to_string(locationId);
+                    char msg[64];
+                    snprintf(msg, sizeof(msg), "LOCATION_CHECKED: %d", locationId);
                     g_pipe->SendAsync(msg);
                     printf("[skull] -> location %d sent\n", locationId);
                 }
@@ -460,11 +468,7 @@ namespace haloap
             unlocked  = g_unlockedMask;
         }
 
-        if (forcedOn == 0 && forcedOff == 0) {
-            static bool loggedOnce = false;
-            if (!loggedOnce) { printf("[skull] ApplyForcedSkulls: both masks 0, skipping\n"); loggedOnce = true; }
-            return;
-        }
+        if (forcedOn == 0 && forcedOff == 0) return;
         if (g_inMission.load()) return;
 
         uint64_t* bitmask = ResolveSkullBitmask();
@@ -482,7 +486,8 @@ namespace haloap
         if (updated != current)
         {
             *bitmask = updated;
-            printf("[skull] bitmask: 0x%llx -> 0x%llx\n",
+            printf("[skull] bitmask at %p: 0x%llx -> 0x%llx\n",
+                bitmask,
                 static_cast<unsigned long long>(current),
                 static_cast<unsigned long long>(updated));
         }
@@ -491,6 +496,7 @@ namespace haloap
     void SetInMission(bool inMission)
     {
         g_inMission.store(inMission);
+        printf("[skull] in-mission: %s\n", inMission ? "true" : "false");
     }
 
     uint64_t GetUnlockedMask()

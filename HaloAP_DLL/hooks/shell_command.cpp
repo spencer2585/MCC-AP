@@ -56,12 +56,19 @@ namespace haloap {
             {
                 g_quitLockedMission.store(false);
                 printf("[hook] SHELL_CMD: intercepting — sending quit sequence (locked mission)\n");
+                haloap::SetInMission(false);
                 if (g_original) {
                     g_original(engineObj, 0x0, nullptr);
                     g_original(engineObj, 0xD, nullptr);
                     g_original(engineObj, 0x1, nullptr);
                 }
                 return;
+            }
+            
+            // After the two flag checks, before calling original:
+            if (msgType == 0x1 || msgType == 0xD)
+            {
+                haloap::SetInMission(false);
             }
 
             // Normal processing
