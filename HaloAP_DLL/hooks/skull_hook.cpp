@@ -324,11 +324,18 @@ namespace haloap
         // -----------------------------------------------------------------
         void DetourOnSkullClaimed(void* a, int skull_id, void* c, void* d, void* e)
         {
-            printf("[skull] OnSkullClaimed: skull_id=%d\n", skull_id);
-
-            if (skull_id >= 1 && skull_id < kSkullIdCount)
+            int actualSkullId = -1;
+            __try
             {
-                int locationId = kSkullIdToLocationId[skull_id];
+                actualSkullId = *(int*)((uint8_t*)c + 0x10);
+            }
+            __except (1) {}
+
+            printf("[skull] OnSkullClaimed: skull_id=%d\n", actualSkullId);
+
+            if (actualSkullId >= 1 && actualSkullId < kSkullIdCount)
+            {
+                int locationId = kSkullIdToLocationId[actualSkullId];
                 if (locationId != 0 && g_pipe && g_pipe->IsConnected())
                 {
                     std::string msg = "LOCATION_CHECKED: " + std::to_string(locationId);
@@ -490,6 +497,12 @@ namespace haloap
     {
         std::lock_guard<std::mutex> lock(g_skullMutex);
         return g_unlockedMask;
+    }
+    
+    uint64_t GetForcedMask()
+    {
+        std::lock_guard<std::mutex> lock(g_skullMutex);
+        return g_forcedOnMask | g_forcedOffMask;
     }
 
 } // namespace haloap
