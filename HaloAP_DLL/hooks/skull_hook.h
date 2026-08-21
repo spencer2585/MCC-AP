@@ -26,5 +26,7 @@ namespace haloap {
     void SetInMission(bool inMission);
     
     uint64_t GetUnlockedMask();
+    
+    uint64_t GetForcedMask();
 
 }  // namespace haloap

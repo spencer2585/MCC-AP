@@ -250,12 +250,18 @@ namespace haloap
             {
                 uint8_t* w = (uint8_t*)widget;
                 int skullId = *(int*)(w + 0x1C8);
-
                 if (skullId >= 0 && skullId <= 37)
                 {
                     uint64_t bit = 1ULL << skullId;
                     uint64_t unlockedMask = GetUnlockedMask();
                     uint64_t e8 = *(uint64_t*)(w + 0xe8);
+                    
+                    uint64_t managedMask = GetForcedMask();
+                    if (!(managedMask & bit))
+                        if (g_origSkullSetEnabled)
+                            g_origSkullSetEnabled(widget, enabled);
+                        g_inSkullSetEnabled = false;
+                        return;
 
                     if (!(unlockedMask & bit))
                     {

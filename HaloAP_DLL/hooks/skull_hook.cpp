@@ -453,7 +453,11 @@ namespace haloap
             unlocked  = g_unlockedMask;
         }
 
-        if (forcedOn == 0 && forcedOff == 0) return;
+        if (forcedOn == 0 && forcedOff == 0) {
+            static bool loggedOnce = false;
+            if (!loggedOnce) { printf("[skull] ApplyForcedSkulls: both masks 0, skipping\n"); loggedOnce = true; }
+            return;
+        }
         if (g_inMission.load()) return;
 
         uint64_t* bitmask = ResolveSkullBitmask();
