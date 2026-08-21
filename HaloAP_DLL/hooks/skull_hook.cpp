@@ -300,12 +300,6 @@ namespace haloap
                                 if ((uint8_t*)handler < base || (uint8_t*)handler >= base + size)
                                     continue;
 
-                                MEMORY_BASIC_INFORMATION mbi = {};
-                                if (!VirtualQuery(handler, &mbi, sizeof(mbi)))
-                                    continue;
-                                if (!(mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE)))
-                                    continue;
-
                                 printf("[skull] OnSkullClaimed handler at %p\n", handler);
                                 return handler;
                             }
