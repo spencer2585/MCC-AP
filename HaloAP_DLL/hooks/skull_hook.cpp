@@ -300,6 +300,10 @@ namespace haloap
                                 if ((uint8_t*)handler < base || (uint8_t*)handler >= base + size)
                                     continue;
 
+                                // Skip the string reference itself
+                                if ((uint8_t*)handler == stringAddr)
+                                    continue;
+
                                 printf("[skull] OnSkullClaimed handler at %p\n", handler);
                                 return handler;
                             }
