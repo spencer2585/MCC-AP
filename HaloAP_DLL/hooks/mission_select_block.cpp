@@ -14,6 +14,10 @@ namespace haloap
 {
     namespace
     {
+        
+        std::atomic<bool> g_countingItems{false};
+        std::atomic<int> g_itemCount{0};
+        
         // =================================================================
         // Pattern scan constants
         // =================================================================
@@ -462,6 +466,8 @@ namespace haloap
                 {
                 }
             }
+            if (hasLabel)
+                printf("[nav] Button: '%s'\n", label);
 
             if (hasLabel && strcmp(label, "QUICKSTART") == 0)
             {
@@ -484,6 +490,12 @@ namespace haloap
         // =================================================================
         void DetourAddItem(void* widget, void* item, int param)
         {
+            if (g_trackingSkulls && item && g_skullWidgetCount < 64)
+            {
+                if (g_skullWidgetCount == 0 || g_skullWidgets[g_skullWidgetCount - 1] != item)
+                    g_skullWidgets[g_skullWidgetCount++] = item;
+            }
+
             if (g_populatingMissions.load() && g_nextItemLocked.load())
             {
                 printf("[hook] Skipping locked mission item\n");
@@ -491,15 +503,6 @@ namespace haloap
                 return;
             }
             g_nextItemLocked.store(false);
-
-            // Track skull items during skull screen population
-            if (g_trackingSkulls && item && g_skullWidgetCount < 64)
-            {
-                if (g_skullWidgetCount == 0 || g_skullWidgets[g_skullWidgetCount - 1] != item)
-                {
-                    g_skullWidgets[g_skullWidgetCount++] = item;
-                }
-            }
 
             if (g_addItemOriginal)
                 g_addItemOriginal(widget, item, param);
@@ -510,6 +513,14 @@ namespace haloap
         // =================================================================
         void* DetourAllocItem(void* pool, uint32_t size, const char* type, int flags)
         {
+            
+            // Count items for screen identification
+            if (g_countingItems.load() && type != nullptr)
+            {
+                if (strcmp(type, "handleArrayMessage") == 0)
+                    g_itemCount.fetch_add(1);
+            }
+            
             if (g_populatingMissions.load() && type != nullptr)
             {
                 if (strcmp(type, "handleArrayMessage") == 0)
@@ -535,71 +546,78 @@ namespace haloap
         // =================================================================
         // Chapter tab setup detour
         // =================================================================
+        
         void DetourChapterTabSetup(void* controller)
+{
+    int32_t screenId = 0;
+    __try { screenId = *(int32_t*)((uint8_t*)controller + 0x230); }
+    __except (1) {}
+
+    // Install add item hook
+    if (!g_addItemHooked)
+    {
+        __try
         {
-            int32_t screenId = 0;
-            __try { screenId = *(int32_t*)((uint8_t*)controller + 0x230); }
-            __except (1)
+            void* widget = (void*)((char*)controller + 0x910);
+            uint64_t* vt = *(uint64_t**)widget;
+            void* addFunc = (void*)vt[0x78 / 8];
+            MH_STATUS status = MH_CreateHook(addFunc, (void*)DetourAddItem,
+                                             (void**)&g_addItemOriginal);
+            if (status == MH_OK && MH_EnableHook(addFunc) == MH_OK)
             {
+                g_addItemTarget = addFunc;
+                g_addItemHooked = true;
+                printf("[hook] Add item hook installed at %p\n", addFunc);
             }
-
-            bool isMissionScreen = (screenId > 18);
-            printf("[hook] Chapter tab setup (screenId=%d, isMission=%d)\n", screenId, isMissionScreen);
-
-            if (!g_addItemHooked)
-            {
-                __try
-                {
-                    void* widget = (void*)((char*)controller + 0x910);
-                    uint64_t* vt = *(uint64_t**)widget;
-                    void* addFunc = (void*)vt[0x78 / 8];
-                    MH_STATUS status = MH_CreateHook(addFunc, (void*)DetourAddItem,
-                                                     (void**)&g_addItemOriginal);
-                    if (status == MH_OK && MH_EnableHook(addFunc) == MH_OK)
-                    {
-                        g_addItemTarget = addFunc;
-                        g_addItemHooked = true;
-                        printf("[hook] Add item hook installed at %p\n", addFunc);
-                    }
-                }
-                __except (1) { printf("[hook] Failed to discover add function\n"); }
-            }
-
-            // Start skull tracking before population
-            if (screenId == 14)
-            {
-                g_skullWidgetCount = 0;
-                g_trackingSkulls = true;
-            }
-
-            g_missionCounter.store(0);
-            g_nextItemLocked.store(false);
-            g_populatingMissions.store(isMissionScreen);
-
-            if (g_chapterTabOriginal)
-                g_chapterTabOriginal(controller);
-
-            g_populatingMissions.store(false);
-            g_nextItemLocked.store(false);
-
-            // Stop skull tracking after population
-            if (screenId == 14)
-            {
-                g_trackingSkulls = false;
-                printf("[skull-ui] %d skull widgets captured\n", g_skullWidgetCount);
-    
-                // Cache vtable for fast filtering in the detour
-                if (g_skullWidgetCount > 0 && !g_skullWidgetVtable)
-                {
-                    __try { g_skullWidgetVtable = *(void**)g_skullWidgets[0]; }
-                    __except (1) {}
-                    printf("[skull-ui] Skull vtable cached: %p\n", g_skullWidgetVtable);
-                }
-            }
-
-            printf("[hook] Chapter tab setup complete, %d items processed\n",
-                   g_missionCounter.load());
         }
+        __except (1) { printf("[hook] Failed to discover add function\n"); }
+    }
+
+    if (screenId == 14)
+    {
+        g_skullWidgetCount = 0;
+        g_trackingSkulls = true;
+    }
+
+    bool mayBeMissions = (screenId > 18);
+
+    g_missionCounter.store(0);
+    g_nextItemLocked.store(false);
+    g_populatingMissions.store(mayBeMissions);
+
+    if (g_chapterTabOriginal)
+        g_chapterTabOriginal(controller);
+
+    g_populatingMissions.store(false);
+    g_nextItemLocked.store(false);
+
+    int totalAllocs = g_missionCounter.load();
+
+    // Difficulty has ≤ 8 allocs (4 items), missions have 20 (10 items)
+    // If we filtered but it wasn't actually missions, re-run unfiltered
+    if (mayBeMissions && totalAllocs <= 8)
+    {
+        printf("[hook] Only %d allocs — was difficulty, re-running unfiltered\n", totalAllocs);
+        g_missionCounter.store(0);
+        g_populatingMissions.store(false);
+
+        if (g_chapterTabOriginal)
+            g_chapterTabOriginal(controller);
+    }
+
+    if (screenId == 14)
+    {
+        g_trackingSkulls = false;
+        printf("[skull-ui] %d skull widgets captured\n", g_skullWidgetCount);
+        if (g_skullWidgetCount > 0 && !g_skullWidgetVtable)
+        {
+            __try { g_skullWidgetVtable = *(void**)g_skullWidgets[0]; }
+            __except (1) {}
+        }
+    }
+
+    printf("[hook] Chapter tab setup complete, %d allocs\n", totalAllocs);
+}
     } // end anonymous namespace
 
     // =================================================================
