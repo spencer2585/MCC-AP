@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#include "GameInfo.h"
+#include "SkullData.h"
+
 struct IGameEvents;
 
 struct IGameModule
@@ -14,7 +17,9 @@ struct IGameModule
     
     virtual GameInfo GetGameInfo() = 0;
     
-    virtual MissionList GetMissionList() = 0;
+    virtual bool IsMissionAllowed(int missionID) = 0;
+    
+    virtual int GetMissionCount() = 0;
     
     virtual SkullData GetSkullData() = 0;
     

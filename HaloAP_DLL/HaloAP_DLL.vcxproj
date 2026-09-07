@@ -157,8 +157,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Data\Skull.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Games\GameInfo.h" />
     <ClInclude Include="Games\IGameModule.h" />
+    <ClInclude Include="Games\SkullData.h" />
     <ClInclude Include="hooks\chapter_title.h" />
     <ClInclude Include="hooks\load_level_solo.h" />
     <ClInclude Include="hooks\mission_complete.h" />
