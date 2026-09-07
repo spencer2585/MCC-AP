@@ -158,6 +158,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Games\IGameModule.h" />
     <ClInclude Include="hooks\chapter_title.h" />
     <ClInclude Include="hooks\load_level_solo.h" />
     <ClInclude Include="hooks\mission_complete.h" />
@@ -167,7 +168,7 @@
     <ClInclude Include="hooks\shell_command.h" />
     <ClInclude Include="hooks\shell_level_load.h" />
     <ClInclude Include="hooks\skull_hook.h" />
-    <ClInclude Include="IGameModule.h" />
+    <ClInclude Include="IGameEvents.h" />
     <ClInclude Include="item_handler.h" />
     <ClInclude Include="minhook\MinHook.h" />
     <ClInclude Include="minhook\src\buffer.h" />
@@ -199,9 +200,6 @@
     <ClCompile Include="minhook\src\trampoline.c" />
     <ClCompile Include="pattern_scan.cpp" />
     <ClCompile Include="pipe_client.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="HaloCE\hooks\" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
