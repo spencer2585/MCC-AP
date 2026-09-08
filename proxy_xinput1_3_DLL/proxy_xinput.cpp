@@ -79,23 +79,92 @@
 #pragma comment(linker, "/export:BinkWaitStopAsyncThreadsMulti=bink2w64_original.BinkWaitStopAsyncThreadsMulti,@75")
 #pragma comment(linker, "/export:RADTimerRead=bink2w64_original.RADTimerRead,@76")
 
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved) {
-    if (reason == DLL_PROCESS_ATTACH) {
-        DisableThreadLibraryCalls(hModule);
-
-        // Get the directory this proxy DLL lives in
-        char path[MAX_PATH];
-        GetModuleFileNameA(hModule, path, MAX_PATH);
-        char* lastSlash = strrchr(path, '\\');
-        if (lastSlash) {
-            *(lastSlash + 1) = '\0';
-            strcat_s(path, "HaloAP.dll");
+DWORD WINAPI LoadHaloAPThread(LPVOID module)
+{
+    //cast back to HMODULE
+    HMODULE hModule = static_cast<HMODULE>(module);
+    
+    // Get the directory this proxy DLL lives in
+    char path[MAX_PATH];
+    //where path is going to be stored
+        
+    GetModuleFileNameA(hModule, path, MAX_PATH);
+    //get full path on disk for this modlue
+        
+    char* lastSlash = strrchr(path, '\\');
+    //get the last \\ before the file name, EX if path is C: ...\\MCC\\bink2w64.dll it will get the \\ before bink2w64
+    
+    //stores if strcat_fails
+    bool failed = false;
+        
+    if (lastSlash) {
+        //if we fould the last backslash
+            
+        *(lastSlash + 1) = '\0';
+        //get the character right after the \\ and change it to a null terminator so its the end
+        
+        if (strcat_s(path, "HaloAP.dll") != 0)
+        {
+            failed = true;
+            //set to true, strcat failed
         }
+        //add HaloAP.dll to the end right after the last \\ //
+    }
 
-        HMODULE hap = LoadLibraryA(path);
-        if (!hap) {
-            hap = LoadLibraryA("HaloAP.dll");
+    HMODULE hap = nullptr;
+    
+    //load the library
+    //only if strcat succeeded
+    if (!failed)
+    {
+         hap = LoadLibraryA(path);
+    }
+        
+    //if loading by full path fails try with just the filename
+    if (!hap) 
+        {
+        hap = LoadLibraryA("HaloAP.dll");
+    }
+    
+    //if both attempts fail
+    if (!hap)
+    {
+    MessageBoxA(nullptr, "Failed to load HaloAP.dll, check that HaloAP.dll is with the AP Launcher, redownload the mod if not. Otherwise report in the discord thread", "Error Loading AP Mod", MB_OK | MB_ICONERROR);
+    }
+    
+    return 0;
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved) {
+    //Notes for me
+    //hModule is a handle to this dll, reason is why DllMain is being called, reserved is not relevent for the code here
+    if (reason == DLL_PROCESS_ATTACH) {
+        //filters to just the process attached event
+        
+        DisableThreadLibraryCalls(hModule);
+        //tell windows to stop calling this dllMain for thread attach/detach events
+        
+        //dummy hmodule
+        HMODULE dummy;
+        //Pin DLL
+        if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN, reinterpret_cast<LPCSTR>(hModule), &dummy))
+        {
+            //error pinning
+        }
+        
+        //create thread to load haloap.dll
+        HANDLE hThread = CreateThread(nullptr, 0,LoadHaloAPThread, hModule, 0, nullptr);
+        if (!hThread)
+        {
+            //error creating thread
+        }
+        else
+        {
+            CloseHandle(hThread);
         }
     }
+    
     return TRUE;
+    //tell the loader the dll loaded correctly
 }
+
