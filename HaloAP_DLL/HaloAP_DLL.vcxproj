@@ -157,9 +157,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="console.h" />
     <ClInclude Include="Data\Skull.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Games\GameInfo.h" />
+    <ClInclude Include="Games\halo1\temp.h" />
     <ClInclude Include="Games\IGameModule.h" />
     <ClInclude Include="Games\SkullData.h" />
     <ClInclude Include="hooks\chapter_title.h" />
@@ -183,9 +185,15 @@
     <ClInclude Include="minhook\src\trampoline.h" />
     <ClInclude Include="pattern_scan.h" />
     <ClInclude Include="pipe_client.h" />
+    <ClInclude Include="review.h" />
+    <ClInclude Include="shutdown.h" />
+    <ClInclude Include="ue4-temp.h" />
+    <ClInclude Include="worker_main.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="console.cpp" />
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="Games\halo1\temp.cpp" />
     <ClCompile Include="hooks\chapter_title.cpp" />
     <ClCompile Include="hooks\load_level_solo.cpp" />
     <ClCompile Include="hooks\mission_complete.cpp" />
@@ -203,6 +211,9 @@
     <ClCompile Include="minhook\src\trampoline.c" />
     <ClCompile Include="pattern_scan.cpp" />
     <ClCompile Include="pipe_client.cpp" />
+    <ClCompile Include="review.cpp" />
+    <ClCompile Include="ue4-temp.cpp" />
+    <ClCompile Include="worker_main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

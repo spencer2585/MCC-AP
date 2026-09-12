@@ -38,18 +38,16 @@ namespace haloap {
         void DetourShellCommand(void* engineObj, int msgType, void* context) {
             printf("[hook] SHELL_CMD: type=0x%x\n", msgType);
 
-            if (g_quitAfterComplete.load()) {
-                g_quitAfterComplete.store(false);
-                printf("[hook] SHELL_CMD: intercepting — sending quit sequence\n");
-
-                // Send quit sequence: pause → teardown → resume
-                if (g_original) {
-                    g_original(engineObj, 0x0, nullptr);  // pause
-                    g_original(engineObj, 0xD, nullptr);  // teardown
-                    g_original(engineObj, 0x1, nullptr);  // resume
-                    haloap::SetInMission(false);
-                }
-                return;  // Don't process the original command (which was "load next mission")
+            if (g_quitLockedMission.load())
+            {
+                // EMERGENCY: locked-mission autoquit disabled — this quit sequence
+                // was firing mid-mission and crashing (Unreal teardown mid-play).
+                // Clearing the flag so it can't accumulate; NOT running the quit.
+                // Trade-off: stale-selection gap reopens (player can play a locked
+                // mission), but that's a soft correctness bug vs. a hard crash.
+                g_quitLockedMission.store(false);
+                printf("[hook] SHELL_CMD: locked-mission quit SUPPRESSED (emergency fix)\n");
+                // fall through to normal processing — do NOT return here
             }
             
             if (g_quitLockedMission.load())
