@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-class console
+namespace haloap
 {
-public:
-    
-};
+    void SetupConsole();
+    void TeardownConsole();
+}

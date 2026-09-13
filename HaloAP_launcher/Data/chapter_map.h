@@ -28,7 +28,7 @@ namespace haloap {
             //a50 - The Truth and Reconciliation
             { "a50:0", { 103011, "Truth and Reconciliation" } },
             { "a50:1", { 103012, "Into the Belly of the Beast" } },
-            { "a50:2", { 103013, "Shut up and get Behind me...Sir" } },
+            { "a50:3", { 103013, "Shut up and get Behind me...Sir" } },
             
             //b30 - The Silent Cartographer
             { "b30:0", { 104011, "The Silent Cartographer" } },

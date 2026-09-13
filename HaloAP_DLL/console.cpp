@@ -1,28 +1,44 @@
 ﻿#include "console.h"
+#include <cstdio>
+#include <windows.h>
 
-void SetupConsole()
-{
-    AllocConsole();
-    SetConsoleTitleW(L"HaloAP Dll Console");
-
-    freopen_s(&g_consoleOut, "CONOUT$", "w", stdout);
-    freopen_s(&g_consoleErr, "CONOUT$", "w", stderr);
-
-    setvbuf(stdout, nullptr, _IONBF, 0);
-    setvbuf(stderr, nullptr, _IONBF, 0);
+namespace{
+    #ifdef HALOAP_ENABLE_CONSOLE
+    FILE* g_consoleOut = nullptr;
+    FILE* g_consoleErr = nullptr;
+    #endif
 }
 
-void TeardownConsole()
+namespace haloap
 {
-    if (g_consoleOut)
+    void SetupConsole()
     {
-        fclose(g_consoleOut);
-        g_consoleOut = nullptr;
+        #ifdef HALOAP_ENABLE_CONSOLE
+        AllocConsole();
+        SetConsoleTitleW(L"HaloAP Dll Console");
+
+        freopen_s(&g_consoleOut, "CONOUT$", "w", stdout);
+        freopen_s(&g_consoleErr, "CONOUT$", "w", stderr);
+
+        setvbuf(stdout, nullptr, _IONBF, 0);
+        setvbuf(stderr, nullptr, _IONBF, 0);
+        #endif
     }
-    if (g_consoleErr)
+
+    void TeardownConsole()
     {
-        fclose(g_consoleErr);
-        g_consoleErr = nullptr;
+        #ifdef HALOAP_ENABLE_CONSOLE
+        if (g_consoleOut)
+        {
+            fclose(g_consoleOut);
+            g_consoleOut = nullptr;
+        }
+        if (g_consoleErr)
+        {
+            fclose(g_consoleErr);
+            g_consoleErr = nullptr;
+        }
+        FreeConsole();
+        #endif
     }
-    FreeConsole();
 }

@@ -1,10 +1,26 @@
 ﻿#include "worker_main.h"
+#include "console.h"
+#include "shutdown.h"
+
+#include "shared/common.h"
+
+#include <cstdio>
 
 
-FILE* g_consoleOut = nullptr;
-FILE* g_consoleErr = nullptr;
-PipeClient* g_pipe = nullptr;
+DWORD WINAPI WorkerMain(LPVOID /*param*/)
+{
+    haloap::SetupConsole();
 
+    //create a logging macro
+    printf("==========================================\n");
+    printf("  HaloAP DLL v%s\n", haloap::kVersion);
+    printf("  Running inside MCC (PID %lu)\n", GetCurrentProcessId());
+    printf("==========================================\n");
+
+        
+    haloap::TeardownConsole();
+    return 0;
+}
 
 void UninstallAllHooks()
 {
@@ -13,16 +29,11 @@ void UninstallAllHooks()
     UninstallHalo1Hooks();
 }
 
-DWORD WINAPI WorkerMain(LPVOID /*param*/)
-    {
-        SetupConsole();
+PipeClient* g_pipe = nullptr;
 
-        printf("==========================================\n");
-        printf("  HaloAP DLL v%s\n", haloap::kVersion);
-        printf("  Running inside MCC (PID %lu)\n", GetCurrentProcessId());
-        printf("==========================================\n");
-
-        MH_STATUS mhStatus = MH_Initialize();
+void reviewWorker()
+{
+    MH_STATUS mhStatus = MH_Initialize();
         if (mhStatus != MH_OK)
         {
             printf("MH_Initialize failed: %d\n", mhStatus);
@@ -188,11 +199,8 @@ DWORD WINAPI WorkerMain(LPVOID /*param*/)
         {
             g_pipe->Stop();
             delete g_pipe;
-            g_pipe = nullptr;
-        }
+            g_pipe = nullptr;}
 
-        UninstallAllHooks();
-        MH_Uninitialize();
-        TeardownConsole();
-        return 0;
-    }
+    UninstallAllHooks();
+    MH_Uninitialize();
+}
