@@ -1,7 +1,8 @@
 ﻿#include "worker_main.h"
-#include "logging/console.h"
+#include "ConsoleGuard.h"
 #include "logging/log.h"
 #include "shutdown.h"
+#include "MinHookGuard.h"
 
 #include "shared/common.h"
 
@@ -11,7 +12,7 @@ using haloap::Log;
 
 DWORD WINAPI WorkerMain(LPVOID /*param*/)
 {
-    haloap::SetupConsole();
+    ConsoleGuard console;
 
     //create a logging macro
     Log("==========================================");
@@ -19,8 +20,14 @@ DWORD WINAPI WorkerMain(LPVOID /*param*/)
     Log("  Running inside MCC (PID {})", GetCurrentProcessId());
     Log("==========================================");
 
-        
-    haloap::TeardownConsole();
+    //Initialize minhooks
+    MinHookGuard minhook;
+    if (!minhook.ok())
+    {
+        MessageBoxA(nullptr, "Failed to initilize MinHooks. Aborting", "Error initilizing minhooks", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    
     return 0;
 }
 

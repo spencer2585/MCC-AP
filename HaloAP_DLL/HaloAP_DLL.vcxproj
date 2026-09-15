@@ -157,6 +157,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ConsoleGuard.h" />
     <ClInclude Include="Data\Skull.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Games\GameInfo.h" />
@@ -176,6 +177,7 @@
     <ClInclude Include="item_handler.h" />
     <ClInclude Include="logging\console.h" />
     <ClInclude Include="logging\log.h" />
+    <ClInclude Include="MinHookGuard.h" />
     <ClInclude Include="minhook\MinHook.h" />
     <ClInclude Include="minhook\src\buffer.h" />
     <ClInclude Include="minhook\src\hde\hde32.h" />
@@ -192,6 +194,7 @@
     <ClInclude Include="worker_main.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ConsoleGuard.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Games\halo1\temp.cpp" />
     <ClCompile Include="hooks\chapter_title.cpp" />
@@ -282,6 +285,7 @@
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
     <ClCompile Include="logging\log.cpp" />
+    <ClCompile Include="MinHookGuard.cpp" />
     <ClCompile Include="minhook\src\buffer.c" />
     <ClCompile Include="minhook\src\hde\hde32.c" />
     <ClCompile Include="minhook\src\hde\hde64.c" />
