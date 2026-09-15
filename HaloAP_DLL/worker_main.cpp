@@ -1,21 +1,23 @@
 ﻿#include "worker_main.h"
-#include "console.h"
+#include "logging/console.h"
+#include "logging/log.h"
 #include "shutdown.h"
 
 #include "shared/common.h"
 
 #include <cstdio>
 
+using haloap::Log;
 
 DWORD WINAPI WorkerMain(LPVOID /*param*/)
 {
     haloap::SetupConsole();
 
     //create a logging macro
-    printf("==========================================\n");
-    printf("  HaloAP DLL v%s\n", haloap::kVersion);
-    printf("  Running inside MCC (PID %lu)\n", GetCurrentProcessId());
-    printf("==========================================\n");
+    Log("==========================================");
+    Log("  HaloAP DLL v{}", haloap::kVersion);
+    Log("  Running inside MCC (PID {})", GetCurrentProcessId());
+    Log("==========================================");
 
         
     haloap::TeardownConsole();
