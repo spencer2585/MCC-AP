@@ -28,6 +28,8 @@ DWORD WINAPI WorkerMain(LPVOID /*param*/)
         return 1;
     }
     
+    //next is hooking up the Pipe. pipe refactor is a large refactor that requires redoing the whole item input and location output messageing system
+    
     return 0;
 }
 
@@ -42,15 +44,6 @@ PipeClient* g_pipe = nullptr;
 
 void reviewWorker()
 {
-    MH_STATUS mhStatus = MH_Initialize();
-        if (mhStatus != MH_OK)
-        {
-            printf("MH_Initialize failed: %d\n", mhStatus);
-        }
-        else
-        {
-            printf("MinHook initialized.\n");
-        }
 
         Sleep(5000);
 
