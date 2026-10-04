@@ -1,0 +1,37 @@
+﻿# Beta 1.0.0 ToDo
+- Refactor Proxy DLL (Done)
+- Refactor Mod DLL (In Progress)
+    - DLL Main (Done)
+    - Logging (In Progress)
+      - Debug Console (Done)
+      - Console Guard (Done)
+      - Console Logging (done)
+      - Log File (Waiting for Launcher Rewrite)
+    - Minhook Initialization (Done)
+      - Guard (Done)
+      - Error Message (Done)
+    - Pipe
+    - Engine Hooks
+    - Game Hook Detection
+- Refactor Launcher EXE
+- New Connection Method
+  - ImGUI Setup
+  - Pass to Launcher
+- In Game AP Menu
+  - ImGUI Styling
+- Refactor CE Hooks
+- Add New Game Implementations with given hooks
+  - Halo 2
+  - Halo 3
+  - Halo 4
+  - Halo Reach
+- Deathlink
+- APWorld Revamp
+  - Tough Collectables Require Acrophobia Option
+  - Code Cleanup
+  - Per game or Global Skull Option
+  - Additional Halo Games
+    - Halo 2
+    - Halo 3
+    - Halo 4
+    - Halo Reach
