@@ -1,17 +1,16 @@
 ﻿#pragma once
 
 #include "GameInfo.h"
-#include "SkullData.h"
 
 struct IGameEvents;
 
 struct IGameModule
 {
-    virtual bool InstallHooks(IGameEvents* events) = 0;
+    virtual bool InstallHooks() = 0;
     
     virtual bool UninstallHooks() = 0;
     
-    virtual void SendItem(int localID)= 0;
+    virtual void SendItem(int localID, int count)= 0;
     
     virtual void ReceiveDeathlink() = 0;
     
@@ -21,7 +20,7 @@ struct IGameModule
     
     virtual int GetMissionCount() = 0;
     
-    virtual SkullData GetSkullData() = 0;
+    //TODO handle skulls
     
     virtual ~IGameModule() = default;
 };

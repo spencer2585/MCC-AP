@@ -162,8 +162,8 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="Games\GameInfo.h" />
     <ClInclude Include="Games\halo1\temp.h" />
+    <ClInclude Include="Games\IGameEvents.h" />
     <ClInclude Include="Games\IGameModule.h" />
-    <ClInclude Include="Games\SkullData.h" />
     <ClInclude Include="hooks\chapter_title.h" />
     <ClInclude Include="hooks\load_level_solo.h" />
     <ClInclude Include="hooks\mission_complete.h" />
@@ -173,7 +173,6 @@
     <ClInclude Include="hooks\shell_command.h" />
     <ClInclude Include="hooks\shell_level_load.h" />
     <ClInclude Include="hooks\skull_hook.h" />
-    <ClInclude Include="IGameEvents.h" />
     <ClInclude Include="item_handler.h" />
     <ClInclude Include="logging\console.h" />
     <ClInclude Include="logging\log.h" />
