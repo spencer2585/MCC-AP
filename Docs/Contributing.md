@@ -15,8 +15,8 @@ If your code adds something new it should be made to the current in dev update b
   
 If you are looking to contribute please take a look at the following documentation  
 APWorld Specs  
-Game Module API  
-Quality Standards  
+[Game Module API](ModuleDevelopment.md)  
+[Quality Standards](quality_standards.md)  
 
 Depending on the piece of the project you are contributing to a different person may be the main dev of that piece  
 Core - @Spencer2585  
