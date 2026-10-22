@@ -14,7 +14,7 @@ All contributions should be made via a PR, If your code is a fix to an existing 
 If your code adds something new it should be made to the current in dev update branch.
   
 If you are looking to contribute please take a look at the following documentation  
-APWorld Specs  
+[APWorld Specs](APWorld_Specs)  
 [Game Module API](ModuleDevelopment.md)  
 [Quality Standards](quality_standards.md)  
 
