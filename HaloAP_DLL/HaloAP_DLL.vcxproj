@@ -176,6 +176,7 @@
     <ClInclude Include="minhook\src\trampoline.h" />
     <ClInclude Include="pattern_scan.h" />
     <ClInclude Include="shutdown.h" />
+    <ClInclude Include="WinsockGuard.h" />
     <ClInclude Include="worker_main.h" />
   </ItemGroup>
   <ItemGroup>
@@ -267,6 +268,7 @@
     <ClCompile Include="minhook\src\hook.c" />
     <ClCompile Include="minhook\src\trampoline.c" />
     <ClCompile Include="pattern_scan.cpp" />
+    <ClCompile Include="WinsockGuard.cpp" />
     <ClCompile Include="worker_main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

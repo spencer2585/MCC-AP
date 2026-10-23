@@ -4,7 +4,7 @@
 #include "shutdown.h"
 #include "ClientConnection.h"
 #include "MinHookGuard.h"
-
+#include "WinsockGuard.h"
 #include "shared/common.h"
 
 #include <cstdio>
@@ -28,14 +28,15 @@ DWORD WINAPI WorkerMain(LPVOID /*param*/)
         MessageBoxA(nullptr, "Failed to initilize MinHooks. Aborting", "Error initilizing minhooks", MB_OK | MB_ICONERROR);
         return 1;
     }
-    
-    //next is hooking up the Pipe. pipe refactor is a large refactor that requires redoing the whole item input and location output messageing system
-    WSADATA wsadata;
-    if (WSAStartup(MAKEWORD(2,2),&wsadata) !=0)
+    //initialize winsock
+    WinsockGuard winsock;
+    if (!winsock.ok())
     {
-        Log("Error starting up WSAStartup. Aborting.");
+        Log("Failed to initilize Winsock. Aborting");
         return 1;
     }
+    
+    //connect to client
     ClientConnection client;
     if (!client.connectTCP())
     {
@@ -43,6 +44,7 @@ DWORD WINAPI WorkerMain(LPVOID /*param*/)
         return 1;
     }
     Log("Connected to client.");
+    //loop until game shuts down
     while (!g_shutdown.load())
     {
         Sleep(1000);
