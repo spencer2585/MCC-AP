@@ -71,7 +71,6 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>HaloAP</TargetName>
   </PropertyGroup>
@@ -124,7 +123,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;HALOAPDLL_EXPORTS;_WINDOWS;_USRDLL;HALOAP_ENABLE_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;HALOAPDLL_EXPORTS;_WINDOWS;_USRDLL;HALOAP_ENABLE_CONSOLE;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -143,7 +142,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDLL;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -157,23 +156,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ClientConnection.h" />
     <ClInclude Include="ConsoleGuard.h" />
     <ClInclude Include="Data\Skull.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Games\GameInfo.h" />
-    <ClInclude Include="Games\halo1\temp.h" />
     <ClInclude Include="Games\IGameEvents.h" />
     <ClInclude Include="Games\IGameModule.h" />
-    <ClInclude Include="hooks\chapter_title.h" />
-    <ClInclude Include="hooks\load_level_solo.h" />
-    <ClInclude Include="hooks\mission_complete.h" />
-    <ClInclude Include="hooks\mission_id_lookup.h" />
-    <ClInclude Include="hooks\mission_load.h" />
-    <ClInclude Include="hooks\mission_select_block.h" />
-    <ClInclude Include="hooks\shell_command.h" />
-    <ClInclude Include="hooks\shell_level_load.h" />
-    <ClInclude Include="hooks\skull_hook.h" />
-    <ClInclude Include="item_handler.h" />
     <ClInclude Include="logging\console.h" />
     <ClInclude Include="logging\log.h" />
     <ClInclude Include="MinHookGuard.h" />
@@ -186,26 +175,13 @@
     <ClInclude Include="minhook\src\hde\table64.h" />
     <ClInclude Include="minhook\src\trampoline.h" />
     <ClInclude Include="pattern_scan.h" />
-    <ClInclude Include="pipe_client.h" />
-    <ClInclude Include="review.h" />
     <ClInclude Include="shutdown.h" />
-    <ClInclude Include="ue4-temp.h" />
     <ClInclude Include="worker_main.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ClientConnection.cpp" />
     <ClCompile Include="ConsoleGuard.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="Games\halo1\temp.cpp" />
-    <ClCompile Include="hooks\chapter_title.cpp" />
-    <ClCompile Include="hooks\load_level_solo.cpp" />
-    <ClCompile Include="hooks\mission_complete.cpp" />
-    <ClCompile Include="hooks\mission_id_lookup.cpp" />
-    <ClCompile Include="hooks\mission_load.cpp" />
-    <ClCompile Include="hooks\mission_select_block.cpp" />
-    <ClCompile Include="hooks\shell_command.cpp" />
-    <ClCompile Include="hooks\shell_level_load.cpp" />
-    <ClCompile Include="hooks\skull_hook.cpp" />
-    <ClCompile Include="item_handler.cpp" />
     <ClCompile Include="logging\console.cpp">
       <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -291,9 +267,6 @@
     <ClCompile Include="minhook\src\hook.c" />
     <ClCompile Include="minhook\src\trampoline.c" />
     <ClCompile Include="pattern_scan.cpp" />
-    <ClCompile Include="pipe_client.cpp" />
-    <ClCompile Include="review.cpp" />
-    <ClCompile Include="ue4-temp.cpp" />
     <ClCompile Include="worker_main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
